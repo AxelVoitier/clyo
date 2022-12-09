@@ -14,7 +14,7 @@ from pathlib import Path
 import click
 import typer
 from click.parser import split_opt
-from prompt_toolkit.completion import NestedCompleter, Completer, FuzzyCompleter
+from prompt_toolkit.completion import NestedCompleter, Completer, FuzzyCompleter, WordCompleter
 from prompt_toolkit.document import Document
 from typer.main import get_command
 
@@ -40,6 +40,29 @@ class RootCompleter(Completer):
                 cursor_position=document.cursor_position,
             )
             yield from self._level.get_completions(new_doc, complete_event)
+
+
+class NestedCompleterWithExtra(NestedCompleter):
+
+    def __init__(self, options_with_extra, *args, **kwargs):
+        self._extra_dict = {}
+        options = {}
+        for name, (option, extra) in options_with_extra.items():
+            self._extra_dict[name] = extra
+            options[name] = option
+        super().__init__(options, *args, **kwargs)
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor.lstrip()
+        if ' ' in text:
+            yield from super().get_completions(document, complete_event)
+        else:
+            completer = WordCompleter(
+                list(self.options.keys()),
+                ignore_case=self.ignore_case,
+                meta_dict=self._extra_dict,
+            )
+            yield from completer.get_completions(document, complete_event)
 
 
 class CommandTree:
@@ -113,9 +136,10 @@ class CommandTree:
     def _make_group_completer(self, node):
         def _completion_dict(base):
             for node in base.children.values():
-                yield node.name, node.completer
+                yield node.name, (
+                    node.completer, (node.command.help or ' ').splitlines()[0].strip())
 
-        node.completer = NestedCompleter.from_nested_dict(dict(_completion_dict(node)))
+        node.completer = NestedCompleterWithExtra(dict(_completion_dict(node)))
 
     def _make_command_completer(self, node):
         completion_dict = {}
@@ -123,10 +147,11 @@ class CommandTree:
             if not isinstance(param, click.Option):
                 continue
             for opt in param.opts:
-                completion_dict[f'{split_opt(opt)[1]}='] = None
+                completion_dict[f'{split_opt(opt)[1]}='] = (
+                    None, (param.help or ' ').splitlines()[0].strip())
 
         if completion_dict:
-            node.completer = NestedCompleter.from_nested_dict(completion_dict)
+            node.completer = NestedCompleterWithExtra(completion_dict)
 
     def _make_model(self, command, parent=None):
         for subcommand in command.commands.values():

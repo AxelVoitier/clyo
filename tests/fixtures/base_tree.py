@@ -12,6 +12,7 @@ from configparser import ConfigParser
 from pathlib import Path
 
 # Third-party imports
+import typer
 
 # Local imports
 import clyo
@@ -44,15 +45,26 @@ cli.add_typer(subcli_A, name='level1A', rich_help_panel='Sub CLI A for level 1')
 
 
 @subcli_A.command()
-def command1(arg1, arg2):
+def command1(
+    arg1: str = typer.Argument(..., help='The first arg'),
+    arg2: int = typer.Argument(..., help='The second arg')
+):
     'First command'
     print('First command')
     print(f'{arg1=} ; {arg2=}')
 
 
 @subcli_A.command(deprecated=True)
-def command2(opt_arg1=False):
-    'Second command (deprecated)'
+def command2(
+    opt_arg1: str = typer.Option(False, help='An optional arg'),
+):
+    '''Second command (deprecated)
+
+    This has
+
+    more
+
+    lines'''
     print('Second command (deprecated)')
     print(f'{opt_arg1=}')
 

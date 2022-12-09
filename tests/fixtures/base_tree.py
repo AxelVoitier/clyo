@@ -34,10 +34,23 @@ def root_command1():
 
 
 @cli.command('root2')
-def root_command2(arg1):
+def root_command2(
+    arg1,
+    # arg2,
+):
     'Root command 2'
     print('Root command 2')
     print(f'{arg1=}')
+
+
+@cli.command('root3')
+def root_command3(
+    opt_arg1: str = typer.Option(False, help='An optional arg'),
+    opt_arg2: str = typer.Option(False, help='A second optional arg'),
+):
+    'Root command 3'
+    print('Root command 3')
+    print(f'{opt_arg1=} ; {opt_arg2=}')
 
 
 subcli_A = clyo.Typer()
@@ -47,7 +60,8 @@ cli.add_typer(subcli_A, name='level1A', rich_help_panel='Sub CLI A for level 1')
 @subcli_A.command()
 def command1(
     arg1: str = typer.Argument(..., help='The first arg'),
-    arg2: int = typer.Argument(..., help='The second arg')
+    arg2: int = typer.Argument(..., help='The second arg'),
+    arg3: int = typer.Argument(..., help='The third arg'),
 ):
     'First command'
     print('First command')
@@ -57,6 +71,7 @@ def command1(
 @subcli_A.command(deprecated=True)
 def command2(
     opt_arg1: str = typer.Option(False, help='An optional arg'),
+    opt_arg2: str = typer.Option(False, help='A second optional arg'),
 ):
     '''Second command (deprecated)
 
@@ -66,7 +81,7 @@ def command2(
 
     lines'''
     print('Second command (deprecated)')
-    print(f'{opt_arg1=}')
+    print(f'{opt_arg1=} ; {opt_arg2=}')
 
 
 subcli_AA = clyo.Typer()
@@ -108,6 +123,7 @@ def prompt():
     from clyo.prompt import CommandTree
     from prompt_toolkit import PromptSession
     from prompt_toolkit.output import ColorDepth
+    from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
     from rich import print as rprint
 
     command_tree = CommandTree(cli)
@@ -121,7 +137,11 @@ def prompt():
                 ('#00aa00', '] ')
             ]
 
-            input = session.prompt(prompt, completer=command_tree.completer)
+            input = session.prompt(
+                prompt,
+                completer=command_tree.completer,
+                auto_suggest=AutoSuggestFromHistory()
+            )
 
             try:
                 command, remain = command_tree[input]

@@ -14,11 +14,29 @@ from pathlib import Path
 import click
 import typer
 from click.parser import split_opt
-from prompt_toolkit.completion import NestedCompleter, Completer, FuzzyCompleter, WordCompleter
+from prompt_toolkit.completion import (
+    NestedCompleter, Completer, FuzzyCompleter, WordCompleter,
+    Completion,
+)
 from prompt_toolkit.document import Document
 from typer.main import get_command
 
 # Local imports
+
+
+DEBUG = False
+
+
+def print_in_terminal(*args, **kwargs):
+    if not DEBUG:
+        return
+
+    from prompt_toolkit.application import run_in_terminal
+
+    def _():
+        print(*args, **kwargs)
+
+    run_in_terminal(_)
 
 
 class RootCompleter(Completer):
@@ -28,6 +46,7 @@ class RootCompleter(Completer):
         self._root = root
 
     def get_completions(self, document, complete_event):
+        print_in_terminal(f'\n---------\nNew completion: |{document.text}|')
         if document.text.startswith('/'):
             new_doc = Document(
                 document.text[1:].replace('/', ' '),
@@ -44,25 +63,93 @@ class RootCompleter(Completer):
 
 class NestedCompleterWithExtra(NestedCompleter):
 
-    def __init__(self, options_with_extra, *args, **kwargs):
-        self._extra_dict = {}
+    def __init__(self, options_with_extra, *args, arguments=None, **kwargs):
+        self._display_dict = {}
+        self._meta_dict = {}
         options = {}
-        for name, (option, extra) in options_with_extra.items():
-            self._extra_dict[name] = extra
+        for name, (option, display, meta) in options_with_extra.items():
             options[name] = option
+            self._display_dict[name] = display
+            self._meta_dict[name] = meta
+
+        self._arguments = []
+        if arguments:
+            for display, meta in arguments:
+                self._arguments.append(Completion(
+                    text='',
+                    start_position=0,
+                    display=display,
+                    display_meta=meta,
+                ))
+
         super().__init__(options, *args, **kwargs)
 
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor.lstrip()
+        stripped_len = len(document.text_before_cursor) - len(text)
+
+        print_in_terminal(f'\n|{document.text=}| ; |{text=}|')
+
         if ' ' in text:
-            yield from super().get_completions(document, complete_event)
-        else:
-            completer = WordCompleter(
-                list(self.options.keys()),
-                ignore_case=self.ignore_case,
-                meta_dict=self._extra_dict,
+            terms = text.split()
+            completer = self.options.get(terms[0])
+
+            # If we have a sub completer, use this for the completions.
+            if completer is not None:
+                # yield from super().get_completions(document, complete_event)
+                remaining_text = text[len(terms[0]):].lstrip()
+                move_cursor = len(text) - len(remaining_text) + stripped_len
+
+                new_document = Document(
+                    remaining_text,
+                    cursor_position=document.cursor_position - move_cursor,
+                )
+
+                print_in_terminal(f'We have a completer, forwarding |{new_document.text}|')
+                yield from completer.get_completions(new_document, complete_event)
+                return
+
+        if text.endswith(' '):
+            print_in_terminal('Space at the end, trimming')
+            new_document = Document(
+                '',
+                cursor_position=0,
             )
-            yield from completer.get_completions(document, complete_event)
+
+        elif ' ' in text:
+            print_in_terminal(f'{terms=}')
+            remaining_text = terms[-1]
+            move_cursor = len(text) - len(remaining_text) + stripped_len
+
+            new_document = Document(
+                remaining_text,
+                cursor_position=document.cursor_position - move_cursor,
+            )
+
+        else:
+            new_document = document
+        print_in_terminal(f'document: |{new_document.text}|')
+
+        print_in_terminal('options:', list(self.options.keys()))
+        # print_in_terminal('args', self._arguments)
+
+        completer = WordCompleter(
+            list(self.options.keys()),
+            ignore_case=self.ignore_case,
+            display_dict=self._display_dict,
+            meta_dict=self._meta_dict,
+        )
+        for completion in completer.get_completions(new_document, complete_event):
+            if completion.text in text:
+                continue
+            print_in_terminal('yielding opt', completion)
+            yield completion
+
+        if not new_document.text:
+            nargs = len([term for term in text.split() if '=' not in term])
+            for arg in self._arguments[nargs:]:
+                print_in_terminal('yielding arg', arg)
+                yield arg
 
 
 class CommandTree:
@@ -73,7 +160,6 @@ class CommandTree:
     class Node:
         name: str
         command: click.Command = None
-        # parser: click.parser.OptionParser = field(init=False)
         completer: Completer = None
         children: dict = field(default_factory=dict)
         parent: Node = None
@@ -126,9 +212,6 @@ class CommandTree:
         self._pointer = self._root
         self._parents = []
 
-        # self.path = Path(self.ROOT_PATH)
-        # self.path = self._pointer.path
-
     @property
     def path(self):
         return self._pointer.path
@@ -137,21 +220,31 @@ class CommandTree:
         def _completion_dict(base):
             for node in base.children.values():
                 yield node.name, (
-                    node.completer, (node.command.help or ' ').splitlines()[0].strip())
+                    node.completer,
+                    None,
+                    (node.command.help or ' ').splitlines()[0].strip(),
+                )
 
         node.completer = NestedCompleterWithExtra(dict(_completion_dict(node)))
 
     def _make_command_completer(self, node):
         completion_dict = {}
+        argument_list = []
         for param in node.command.params:
-            if not isinstance(param, click.Option):
-                continue
-            for opt in param.opts:
-                completion_dict[f'{split_opt(opt)[1]}='] = (
-                    None, (param.help or ' ').splitlines()[0].strip())
+            if isinstance(param, click.Option):
+                for opt in param.opts:
+                    completion_dict[f'{split_opt(opt)[1]}='] = (
+                        None,
+                        None,
+                        (param.help or ' ').splitlines()[0].strip(),
+                    )
+            elif isinstance(param, click.Argument):
+                argument_list.append((
+                    f'<{param.human_readable_name}>',
+                    (param.help or ' ').splitlines()[0].strip(),
+                ))
 
-        if completion_dict:
-            node.completer = NestedCompleterWithExtra(completion_dict)
+        node.completer = NestedCompleterWithExtra(completion_dict, arguments=argument_list)
 
     def _make_model(self, command, parent=None):
         for subcommand in command.commands.values():
@@ -171,6 +264,7 @@ class CommandTree:
     @property
     def completer(self):
         return FuzzyCompleter(RootCompleter(self._pointer.completer, self._root))
+        # return RootCompleter(self._pointer.completer, self._root)
 
     @property
     def at_root(self):

@@ -128,6 +128,9 @@ def prompt():
 
     command_tree = CommandTree(cli)
 
+    def bottom_toolbar():
+        return ''
+
     session = PromptSession(color_depth=ColorDepth.TRUE_COLOR)
     try:
         while True:
@@ -140,7 +143,9 @@ def prompt():
             input = session.prompt(
                 prompt,
                 completer=command_tree.completer,
-                auto_suggest=AutoSuggestFromHistory()
+                auto_suggest=AutoSuggestFromHistory(),
+                mouse_support=True,
+                # bottom_toolbar=bottom_toolbar,
             )
 
             try:

@@ -96,7 +96,6 @@ class NestedCompleterWithExtra(NestedCompleter):
 
             # If we have a sub completer, use this for the completions.
             if completer is not None:
-                # yield from super().get_completions(document, complete_event)
                 remaining_text = text[len(terms[0]):].lstrip()
                 move_cursor = len(text) - len(remaining_text) + stripped_len
 
@@ -278,11 +277,8 @@ class CommandTree:
         remain = name.replace('/', ' ').strip()
         while remain:
             fields = remain.split(' ', maxsplit=1)
-            if len(fields) > 1:
-                subpath, remain = fields
-            else:
-                subpath, = fields
-                remain = ''
+            subpath = fields.pop(0)
+            remain = fields.pop() if fields else ''
 
             if not subpath:
                 continue

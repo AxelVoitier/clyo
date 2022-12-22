@@ -189,7 +189,10 @@ class CommandTree:
                     if '=' in arg:
                         opt, value = arg.split('=', maxsplit=1)
                         if opt in opts:
-                            args.append(f'{opts[opt]}={value}')
+                            if value:
+                                args.append(f'{opts[opt]}={value}')
+                            else:
+                                args.append(opts[opt])
                         else:
                             args.append(arg)
                     else:
@@ -231,12 +234,24 @@ class CommandTree:
         argument_list = []
         for param in node.command.params:
             if isinstance(param, click.Option):
-                for opt in param.opts:
-                    completion_dict[f'{split_opt(opt)[1]}='] = (
+                if param.is_bool_flag and param.default:
+                    # The flag is on by default. Use secondary opts
+                    opts = param.secondary_opts
+                else:
+                    opts = param.opts
+
+                for opt in opts:
+                    if param.is_flag:
+                        opt_name = opt
+                    else:
+                        opt_name = f'{split_opt(opt)[1]}='
+
+                    completion_dict[opt_name] = (
                         None,
                         None,
                         (param.help or ' ').splitlines()[0].strip(),
                     )
+
             elif isinstance(param, click.Argument):
                 argument_list.append((
                     f'<{param.human_readable_name}>',

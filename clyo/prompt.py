@@ -24,7 +24,7 @@ from typer.main import get_command
 # Local imports
 
 
-DEBUG = False
+DEBUG = True
 
 
 def print_in_terminal(*args, **kwargs):
@@ -46,7 +46,7 @@ class RootCompleter(Completer):
         self._root = root
 
     def get_completions(self, document, complete_event):
-        print_in_terminal(f'\n---------\nNew completion: |{document.text}|')
+        # print_in_terminal(f'\n---------\nNew completion: |{document.text}|')
         if document.text.startswith('/'):
             new_doc = Document(
                 document.text[1:].replace('/', ' '),
@@ -88,7 +88,7 @@ class NestedCompleterWithExtra(NestedCompleter):
         text = document.text_before_cursor.lstrip()
         stripped_len = len(document.text_before_cursor) - len(text)
 
-        print_in_terminal(f'\n|{document.text=}| ; |{text=}|')
+        # print_in_terminal(f'\n|{document.text=}| ; |{text=}|')
 
         if ' ' in text:
             terms = text.split()
@@ -104,19 +104,19 @@ class NestedCompleterWithExtra(NestedCompleter):
                     cursor_position=document.cursor_position - move_cursor,
                 )
 
-                print_in_terminal(f'We have a completer, forwarding |{new_document.text}|')
+                # print_in_terminal(f'We have a completer, forwarding |{new_document.text}|')
                 yield from completer.get_completions(new_document, complete_event)
                 return
 
         if text.endswith(' '):
-            print_in_terminal('Space at the end, trimming')
+            # print_in_terminal('Space at the end, trimming')
             new_document = Document(
                 '',
                 cursor_position=0,
             )
 
-        elif ' ' in text:
-            print_in_terminal(f'{terms=}')
+        elif ' ' in text:  # No subcompleter this time (eg. some parameter are given)
+            # print_in_terminal(f'{terms=}')
             remaining_text = terms[-1]
             move_cursor = len(text) - len(remaining_text) + stripped_len
 
@@ -127,9 +127,9 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         else:
             new_document = document
-        print_in_terminal(f'document: |{new_document.text}|')
+        # print_in_terminal(f'document: |{new_document.text}|')
 
-        print_in_terminal('options:', list(self.options.keys()))
+        # print_in_terminal('options:', list(self.options.keys()))
         # print_in_terminal('args', self._arguments)
 
         completer = WordCompleter(
@@ -141,13 +141,13 @@ class NestedCompleterWithExtra(NestedCompleter):
         for completion in completer.get_completions(new_document, complete_event):
             if completion.text in text:
                 continue
-            print_in_terminal('yielding opt', completion)
+            # print_in_terminal('yielding opt', completion)
             yield completion
 
         if not new_document.text:
             nargs = len([term for term in text.split() if '=' not in term])
             for arg in self._arguments[nargs:]:
-                print_in_terminal('yielding arg', arg)
+                # print_in_terminal('yielding arg', arg)
                 yield arg
 
 

@@ -66,15 +66,23 @@ class NestedCompleterWithExtra(NestedCompleter):
     def __init__(self, options_with_extra, *args, arguments=None, **kwargs):
         self._display_dict = {}
         self._meta_dict = {}
+        self._hidden = {}
         options = {}
-        for name, (option, display, meta) in options_with_extra.items():
-            options[name] = option
-            self._display_dict[name] = display
-            self._meta_dict[name] = meta
+
+        for name, (option, display, meta, opt_kwargs) in options_with_extra.items():
+            if opt_kwargs.get('hidden', False):
+                self._hidden[name] = option
+            else:
+                options[name] = option
+                self._display_dict[name] = display
+                self._meta_dict[name] = meta
 
         self._arguments = []
         if arguments:
-            for display, meta in arguments:
+            for display, meta, arg_kwargs in arguments:
+                if arg_kwargs.get('hidden', False):
+                    continue
+
                 self._arguments.append(Completion(
                     text='',
                     start_position=0,
@@ -92,7 +100,7 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         if ' ' in text:
             terms = text.split()
-            completer = self.options.get(terms[0])
+            completer = self.options.get(terms[0]) or self._hidden.get(terms[0])
 
             # If we have a sub completer, use this for the completions.
             if completer is not None:
@@ -225,6 +233,7 @@ class CommandTree:
                     node.completer,
                     None,
                     (node.command.help or ' ').splitlines()[0].strip(),
+                    dict(hidden=node.command.hidden),
                 )
 
         node.completer = NestedCompleterWithExtra(dict(_completion_dict(node)))
@@ -250,12 +259,14 @@ class CommandTree:
                         None,
                         None,
                         (param.help or ' ').splitlines()[0].strip(),
+                        dict(hidden=param.hidden),
                     )
 
             elif isinstance(param, click.Argument):
                 argument_list.append((
                     f'<{param.human_readable_name}>',
                     (param.help or ' ').splitlines()[0].strip(),
+                    dict(hidden=param.hidden),
                 ))
 
         node.completer = NestedCompleterWithExtra(completion_dict, arguments=argument_list)

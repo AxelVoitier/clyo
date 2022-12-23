@@ -65,16 +65,18 @@ def command1(
     arg1: str = typer.Argument(..., help='The first arg'),
     arg2: int = typer.Argument(..., help='The second arg'),
     arg3: int = typer.Argument(..., help='The third arg'),
+    arg4: int = typer.Argument(..., hidden=True, help='The fourth (hidden) arg'),
 ):
     'First command'
     print('First command')
-    print(f'{arg1=} ; {arg2=}')
+    print(f'{arg1=} ; {arg2=} ; {arg3=} ; {arg4=}')
 
 
 @subcli_A.command(deprecated=True)
 def command2(
     opt_arg1: str = typer.Option(False, help='An optional arg'),
     opt_arg2: str = typer.Option(False, help='A second optional arg'),
+    opt_arg3: str = typer.Option(False, hidden=True, help='An hidden optional arg'),
 ):
     '''Second command (deprecated)
 
@@ -84,7 +86,17 @@ def command2(
 
     lines'''
     print('Second command (deprecated)')
-    print(f'{opt_arg1=} ; {opt_arg2=}')
+    print(f'{opt_arg1=} ; {opt_arg2=} ; {opt_arg3=}')
+
+
+@subcli_A.command(hidden=True)
+def hidden_subcommand1(
+    arg1: str = typer.Argument(..., help='The first arg'),
+    opt_arg1: str = typer.Option(False, help='An optional arg'),
+):
+    '''Hidden subcommand'''
+    print('Hidden subcommand')
+    print(f'{opt_arg1=} ; {arg1=}')
 
 
 subcli_AA = clyo.Typer()
@@ -120,7 +132,7 @@ def command6():
     print('Sixth command (deprecated)')
 
 
-@cli.command()
+@cli.command(hidden=True)
 def prompt():
     import click
     from clyo.prompt import CommandTree

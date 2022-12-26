@@ -262,7 +262,7 @@ class CommandTree:
 
         for param in node.command.params:
             # Metavar
-            metavar_text = Text(style='bold yellow')
+            metavar_text = Text(style='bold blue')
             metavar_str = param.make_metavar()
             if (
                 isinstance(param, click.Argument)
@@ -292,7 +292,7 @@ class CommandTree:
                 pass
 
             # Default
-            default_text = Text(style='dim')
+            default_text = Text(style='magenta dim')
             default_str = ''
             if isinstance(param, (typer.core.TyperOption, typer.core.TyperArgument)):
                 if param.show_default:

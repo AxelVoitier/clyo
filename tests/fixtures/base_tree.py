@@ -191,7 +191,7 @@ def prompt():
                     # ex.show(file=sys.stderr)
                     ex.show()
                 except click.Abort:
-                    rprint('[rrd]Aborted![/]', file=sys.stderr)
+                    rprint('[red]Aborted![/]', file=sys.stderr)
                 except Exception as ex:
                     rprint('[red]Exception:[/]', ex, file=sys.stderr)
 

@@ -20,6 +20,7 @@ from prompt_toolkit.completion import (
     Completion,
 )
 from prompt_toolkit.document import Document
+from prompt_toolkit.formatted_text import FormattedText
 from rich.text import Text
 from typer.main import get_command
 from typer import rich_utils
@@ -326,9 +327,13 @@ class CommandTree:
                     else:
                         opt_name = f'{split_opt(opt)[1]}='
 
+                    display = None
+                    if param.required:
+                        display = FormattedText([('bold', opt_name)])
+
                     completion_dict[opt_name] = (
                         None,
-                        None,
+                        display,
                         meta_str,
                         dict(hidden=param.hidden),
                     )
@@ -336,8 +341,12 @@ class CommandTree:
                     break  # Only one per param
 
             elif isinstance(param, click.Argument):
+                display = f'<{param.human_readable_name}>'
+                if param.required:
+                    display = FormattedText([('bold', display)])
+
                 argument_list.append((
-                    f'<{param.human_readable_name}>',
+                    display,
                     meta_str,
                     dict(hidden=param.hidden),
                 ))

@@ -14,12 +14,15 @@ from pathlib import Path
 import click
 import typer
 from click.parser import split_opt
+from prompt_toolkit import ANSI
 from prompt_toolkit.completion import (
     NestedCompleter, Completer, FuzzyCompleter, WordCompleter,
     Completion,
 )
 from prompt_toolkit.document import Document
+from rich.text import Text
 from typer.main import get_command
+from typer import rich_utils
 
 # Local imports
 
@@ -37,6 +40,17 @@ def print_in_terminal(*args, **kwargs):
         print(*args, **kwargs)
 
     run_in_terminal(_)
+
+
+def rich_to_ptk(*renderables) -> ANSI:
+    console = rich_utils._get_rich_console()
+    console.begin_capture()
+
+    for renderable in renderables:
+        console.print(renderable, end='')
+
+    rendered = console.end_capture()
+    return ANSI(rendered.strip())
 
 
 class RootCompleter(Completer):
@@ -232,7 +246,10 @@ class CommandTree:
                 yield node.name, (
                     node.completer,
                     None,
-                    (node.command.help or ' ').splitlines()[0].strip(),
+                    rich_to_ptk(rich_utils._make_rich_rext(
+                        text=(node.command.help or ' ').splitlines()[0].strip(),
+                        markup_mode=getattr(node.command, 'rich_markup_mode', None),
+                    )),
                     dict(hidden=node.command.hidden),
                 )
 
@@ -241,7 +258,61 @@ class CommandTree:
     def _make_command_completer(self, node):
         completion_dict = {}
         argument_list = []
+        markup_mode = getattr(node.command, 'rich_markup_mode', None)
+
         for param in node.command.params:
+            # Metavar
+            metavar_text = Text(style='bold yellow')
+            metavar_str = param.make_metavar()
+            if (
+                isinstance(param, click.Argument)
+                and param.name
+                and metavar_str == param.name.upper()
+            ):
+                metavar_str = param.type.name.upper()
+            if metavar_str == 'BOOLEAN':
+                metavar_str = 'FLAG'
+            if metavar_str:
+                metavar_text.append(metavar_str)
+                metavar_text.append(' ')
+
+            # Range
+            try:
+                # skip count with default range type
+                if (
+                    isinstance(param.type, click.types._NumberRangeBase)
+                    and isinstance(param, click.Option)
+                    and not (param.count and param.type.min == 0 and param.type.max is None)
+                ):
+                    range_str = param.type._describe_range()
+                    if range_str:
+                        metavar_text.append(f'[{range_str}] ')
+            except AttributeError:
+                # click.types._NumberRangeBase is only in Click 8x onwards
+                pass
+
+            # Default
+            default_text = Text(style='dim')
+            default_str = ''
+            if isinstance(param, (typer.core.TyperOption, typer.core.TyperArgument)):
+                if param.show_default:
+                    ctx = click.get_current_context()
+                    show_default_is_str = isinstance(param.show_default, str)
+                    default_value = param._extract_default_help_str(ctx=ctx)
+                    default_str = param._get_default_string(
+                        ctx=ctx,
+                        show_default_is_str=show_default_is_str,
+                        default_value=default_value,
+                    )
+            if default_str:
+                default_text.append(f'({default_str}) ')
+
+            # Help text
+            help_str = (param.help or ' ').splitlines()[0].strip()
+            help_text = rich_utils._make_rich_rext(text=help_str, markup_mode=markup_mode)
+
+            meta_str = rich_to_ptk(metavar_text, default_text, help_text)
+
             if isinstance(param, click.Option):
                 if param.is_bool_flag and param.default:
                     # The flag is on by default. Use secondary opts
@@ -258,14 +329,16 @@ class CommandTree:
                     completion_dict[opt_name] = (
                         None,
                         None,
-                        (param.help or ' ').splitlines()[0].strip(),
+                        meta_str,
                         dict(hidden=param.hidden),
                     )
+
+                    break  # Only one per param
 
             elif isinstance(param, click.Argument):
                 argument_list.append((
                     f'<{param.human_readable_name}>',
-                    (param.help or ' ').splitlines()[0].strip(),
+                    meta_str,
                     dict(hidden=param.hidden),
                 ))
 

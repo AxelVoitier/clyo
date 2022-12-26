@@ -46,8 +46,8 @@ def root_command2(
 @cli.command('root3')
 def root_command3(
     opt_arg1: str = typer.Option(False, help='An optional arg'),
-    opt_arg2: str = typer.Option(False, help='A second optional arg'),
-    flag1: bool = typer.Option(False, '--flag1', '-f', help='A flag option'),
+    opt_arg2: str = typer.Option(False, help='A **second** *optional* arg'),
+    flag1: bool = typer.Option(False, '--flag1', '--flg1', '-f', '-y', help='A flag option'),
     flag2: bool = typer.Option(True, '--flag2/--no-flag2', '-t/-u', help='Another flag option'),
     flag3: bool = typer.Option(True, help='Yet another flag option'),
 ):
@@ -75,8 +75,8 @@ def command1(
 @subcli_A.command(deprecated=True)
 def command2(
     opt_arg1: str = typer.Option(False, help='An optional arg'),
-    opt_arg2: str = typer.Option(False, help='A second optional arg'),
-    opt_arg3: str = typer.Option(False, hidden=True, help='An hidden optional arg'),
+    opt_arg2: int = typer.Option(0, help='A second optional arg'),
+    opt_arg3: int = typer.Option(0, hidden=True, help='An hidden optional arg'),
 ):
     '''Second command (deprecated)
 

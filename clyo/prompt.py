@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Iterable, Mapping
+    from collections.abc import Iterator, Iterable, Mapping, Callable
     from typing import Any, Self, TypeAlias
 
     from click import Command
@@ -446,6 +446,10 @@ class CommandTree:
         )
         self._pointer = self._root
 
+        self._prefixes: dict[str, Callable[[str], tuple[Node, str]]] = {}
+        self.add_prefix('help', self._help_prefix)
+        self.add_prefix('?', self._help_prefix)
+
     @property
     def path(self) -> Path:
         return self._pointer.path
@@ -459,32 +463,50 @@ class CommandTree:
     def at_root(self) -> bool:
         return (self.path == self.ROOT_PATH)
 
-    def help(self, command: str | None = None) -> None:
-        if command and command.strip():
-            self[command][0].exec('--help')
+    def add_prefix(self, name: str, callback: Callable[[str], tuple[Node, str]]) -> None:
+        self._prefixes[name] = callback
+
+    def _help_prefix(self, args: str) -> tuple[Node, str]:
+        if args.strip():
+            command, _ = self.get_command(args, prefix_enabled=False)
         else:
-            self._pointer.exec('--help')
+            command = self._pointer
+
+        return command, '--help'
 
     def __getitem__(self, name: str) -> tuple[Node, str]:
+        return self.get_command(name, prefix_enabled=True)
+
+    def get_command(self, prompt: str, prefix_enabled: bool = True) -> tuple[Node, str]:
+        if '#' in prompt:
+            prompt = prompt[:prompt.index('#')]
+
+        fields = prompt.strip().split(' ', maxsplit=1)
+        command = fields.pop(0)
+        args = fields.pop() if fields else ''
+
         pointer = self._pointer
-        if name.lstrip().startswith('/'):
+        if command.startswith('/'):
             pointer = self._root
 
-        remain = name.replace('/', ' ').strip()
-        while remain:
-            fields = remain.split(' ', maxsplit=1)
+        while command:
+            fields = command.lstrip('/').split('/', maxsplit=1)
             subpath = fields.pop(0)
-            remain = fields.pop() if fields else ''
-
-            if not subpath:
-                continue
+            command = fields.pop() if fields else ''
 
             if subpath == '..':
                 pointer = pointer.parent if pointer.parent else pointer
-            else:
-                pointer = pointer.children[subpath]
+            elif subpath:  # If not, do nothing. Handles case of just '/'
+                try:
+                    pointer = pointer.children[subpath]
+                except KeyError:
+                    if prefix_enabled and (not command) and (subpath in self._prefixes):
+                        return self._prefixes[subpath](args)
+                    else:
+                        raise
+            prefix_enabled = False
 
             if not pointer.children:
                 break
 
-        return pointer, remain
+        return pointer, args

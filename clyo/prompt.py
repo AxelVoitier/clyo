@@ -28,13 +28,15 @@ import click
 import typer
 import typer.core
 from click.parser import split_opt
-from prompt_toolkit import ANSI
+from prompt_toolkit import ANSI, PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import (
     NestedCompleter, Completer, FuzzyCompleter, WordCompleter,
     Completion,
 )
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.output import ColorDepth
 from rich import print as rprint
 from rich.text import Text
 from typer.main import get_command
@@ -69,11 +71,23 @@ def rich_to_ptk(*renderables: RenderableType) -> ANSI:
     return ANSI(rendered.strip())
 
 
-class RootCompleter(Completer):
+class TreeCompleter(Completer):
 
-    def __init__(self, level: Completer, root: Node) -> None:
-        self._level = level
-        self._root = root
+    def __init__(
+        self,
+        command_tree: CommandTree,
+        current_completer: Completer | None = None
+    ) -> None:
+        self._tree = command_tree
+        self._current_completer = current_completer or self._tree.root_command.completer
+
+    @property
+    def current_completer(self) -> Completer:
+        return self._current_completer
+
+    @current_completer.setter
+    def current_completer(self, completer: Completer) -> None:
+        self._current_completer = completer
 
     def get_completions(
         self,
@@ -92,13 +106,24 @@ class RootCompleter(Completer):
                 document.text[1:].replace('/', ' '),
                 cursor_position=document.cursor_position - 1,
             )
-            yield from self._root.completer.get_completions(new_doc, complete_event)
+            yield from self._tree.root_command.completer.get_completions(new_doc, complete_event)
         else:
             new_doc = Document(
                 document.text.replace('/', ' '),
                 cursor_position=document.cursor_position,
             )
-            yield from self._level.get_completions(new_doc, complete_event)
+            yield from self.current_completer.get_completions(new_doc, complete_event)
+
+
+class AutoTreeCompleter(TreeCompleter):
+
+    @property
+    def current_completer(self) -> Completer:
+        return self._tree.current_command.completer
+
+    @current_completer.setter
+    def current_completer(self, completer: Completer) -> None:
+        raise ValueError('Cannot set a current completer on an AutoTreeCompleter')
 
 
 class NestedCompleterWithExtra(NestedCompleter):
@@ -445,6 +470,8 @@ class CommandTree:
             command=root_command,
         )
         self._pointer = self._root
+        self._current_completer: Completer | None = None
+        self._completer = FuzzyCompleter(AutoTreeCompleter(self))
 
         self._prefixes: dict[str, Callable[[str], tuple[Node, str]]] = {}
         self.add_prefix('help', self._help_prefix)
@@ -454,14 +481,36 @@ class CommandTree:
     def path(self) -> Path:
         return self._pointer.path
 
+    @path.setter
+    def path(self, path: str | Path) -> None:
+        command, args = self[str(path)]
+
+        if args:
+            raise ValueError(f'Cannot set a path that contains arguments: {args}')
+        if not command.children:
+            raise ValueError(f'Cannot set a path that is a leaf command: {command.path}')
+
+        self.goto(command)
+
+    def goto(self, command: Node) -> None:
+        self._pointer = command
+        self._current_completer = None
+
     @property
-    def completer(self) -> Completer:
-        return FuzzyCompleter(RootCompleter(self._pointer.completer, self._root))
-        # return RootCompleter(self._pointer.completer, self._root)
+    def current_command(self) -> Node:
+        return self._pointer
+
+    @property
+    def root_command(self) -> Node:
+        return self._root
 
     @property
     def at_root(self) -> bool:
         return (self.path == self.ROOT_PATH)
+
+    @property
+    def completer(self) -> Completer:
+        return self._completer
 
     def add_prefix(self, name: str, callback: Callable[[str], tuple[Node, str]]) -> None:
         self._prefixes[name] = callback
@@ -510,3 +559,34 @@ class CommandTree:
                 break
 
         return pointer, args
+
+    def make_prompt_session(self, **prompt_kwargs: Any) -> PromptSession[str]:
+        prompt_kwargs.setdefault('message', self.prompt_message)
+        prompt_kwargs.setdefault('color_depth', ColorDepth.TRUE_COLOR)
+        prompt_kwargs.setdefault('completer', self.completer)
+        prompt_kwargs.setdefault('auto_suggest', AutoSuggestFromHistory())
+        prompt_kwargs.setdefault('mouse_support', True)
+        # prompt_kwargs.setdefault('enable_system_prompt', True)
+
+        return PromptSession[str](**prompt_kwargs)
+
+    def prompt_message(self) -> AnyFormattedText:
+        return [
+            ('#00aa00', '['),
+            ('ansibrightcyan', str(self.path)),
+            ('#00aa00', '] ')
+        ]
+
+    def repl(self, session: PromptSession[str], **prompt_kwargs: Any) -> None:
+        input = session.prompt(**prompt_kwargs)
+
+        try:
+            command, args = self[input]
+        except KeyError:
+            rprint('[red]Command not found:[/]', input, file=sys.stderr)
+            return
+
+        if command.children and not args:
+            self.goto(command)
+        else:
+            command.exec(args)

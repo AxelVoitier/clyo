@@ -134,48 +134,14 @@ def command6():
 
 @cli.command(hidden=True)
 def prompt() -> None:
-    import click
     from clyo.prompt import CommandTree
-    from prompt_toolkit import PromptSession
-    from prompt_toolkit.output import ColorDepth
-    from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-    from rich import print as rprint
 
     command_tree = CommandTree(cli)
 
-    def bottom_toolbar():
-        return ''
-
-    session = PromptSession(color_depth=ColorDepth.TRUE_COLOR)
+    session = command_tree.make_prompt_session()
     try:
         while True:
-            prompt = [
-                ('#00aa00', '['),
-                ('ansibrightcyan', str(command_tree.path)),
-                ('#00aa00', '] ')
-            ]
-
-            input: str = session.prompt(
-                prompt,
-                completer=command_tree.completer,
-                auto_suggest=AutoSuggestFromHistory(),
-                mouse_support=True,
-                # bottom_toolbar=bottom_toolbar,
-            )
-
-            try:
-                command, remain = command_tree[input]
-            except KeyError:
-                if input.startswith('help'):
-                    command_tree.help(input.replace('help', '', 1))
-                else:
-                    rprint('[red]Command not found:[/]', input, file=sys.stderr)
-                continue
-
-            if command.children:
-                command_tree._pointer = command
-            else:
-                command.exec(remain)
+            command_tree.repl(session)
 
     except KeyboardInterrupt:
         pass

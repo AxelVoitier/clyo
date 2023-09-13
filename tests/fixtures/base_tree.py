@@ -133,7 +133,7 @@ def command6():
 
 
 @cli.command(hidden=True)
-def prompt():
+def prompt() -> None:
     import click
     from clyo.prompt import CommandTree
     from prompt_toolkit import PromptSession
@@ -155,7 +155,7 @@ def prompt():
                 ('#00aa00', '] ')
             ]
 
-            input = session.prompt(
+            input: str = session.prompt(
                 prompt,
                 completer=command_tree.completer,
                 auto_suggest=AutoSuggestFromHistory(),
@@ -166,34 +166,16 @@ def prompt():
             try:
                 command, remain = command_tree[input]
             except KeyError:
-                print('Command not found:', input)
+                if input.startswith('help'):
+                    command_tree.help(input.replace('help', '', 1))
+                else:
+                    rprint('[red]Command not found:[/]', input, file=sys.stderr)
                 continue
 
             if command.children:
                 command_tree._pointer = command
             else:
-                try:
-                    command.command(
-                        command.make_args(remain),
-                        prog_name=str(command.path),
-                        # standalone_mode=False,
-                    )
-                except SystemExit:
-                    pass
-                except click.ClickException as ex:
-                    # print('ctx', click.get_current_context(silent=True),
-                    #       click.get_current_context(silent=True).color)
-                    # print('ex.ctx', ex.ctx, ex.ctx.color)
-                    # ex.ctx = click.get_current_context()
-                    # ex.ctx.color = True
-                    # with ex.ctx:
-                    # with click.get_current_context():
-                    # ex.show(file=sys.stderr)
-                    ex.show()
-                except click.Abort:
-                    rprint('[red]Aborted![/]', file=sys.stderr)
-                except Exception as ex:
-                    rprint('[red]Exception:[/]', ex, file=sys.stderr)
+                command.exec(remain)
 
     except KeyboardInterrupt:
         pass
@@ -201,7 +183,7 @@ def prompt():
 
 if __name__ == '__main__':
     cli.set_main_callback(
-        NAME, config=config,  default_command=prompt,
+        NAME, config=config, default_command=prompt,
         default_config_path=Path('config.cfg')
     )
 

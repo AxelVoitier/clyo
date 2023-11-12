@@ -16,6 +16,9 @@ typing:
 	mypy clyo
 
 tests:
+	py.test --cov=clyo --cov-report=term-missing tests
+
+tests-x:
 	py.test --cov=clyo --cov-report=term-missing -x tests
 
 clean:

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Iterable, Mapping, Callable
+    from collections.abc import Callable, Iterable, Iterator, Mapping
     from typing import Any, Self, TypeAlias
 
     from click import Command
@@ -30,22 +30,20 @@ import typer.core
 from click.parser import split_opt
 from prompt_toolkit import ANSI, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import (
-    NestedCompleter, Completer, FuzzyCompleter, WordCompleter,
-    Completion,
-)
+from prompt_toolkit.completion import (Completer, Completion, FuzzyCompleter,
+                                       NestedCompleter, WordCompleter)
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.output import ColorDepth
 from rich import print as rprint
 from rich.text import Text
-from typer.main import get_command
 from typer import rich_utils
+from typer.main import get_command
 
 # Local imports
 
 
-DEBUG = True
+DEBUG = False
 
 
 def print_in_terminal(*args: Any, **kwargs: Any) -> None:
@@ -58,6 +56,7 @@ def print_in_terminal(*args: Any, **kwargs: Any) -> None:
         print(*args, **kwargs)
 
     run_in_terminal(_)
+    print(*args, **kwargs)
 
 
 def rich_to_ptk(*renderables: RenderableType) -> ANSI:
@@ -94,25 +93,19 @@ class TreeCompleter(Completer):
         document: Document,
         complete_event: CompleteEvent
     ) -> Iterator[Completion]:
-        # print_in_terminal(f'\n---------\nNew completion: |{document.text}|')
-        if document.text.startswith('help '):
-            document = Document(
-                document.text.replace('help ', ''),
-                cursor_position=document.cursor_position - 5,
-            )
+        print_in_terminal(f'\n---------\nNew completion: |{document.text}|, |{document.text_before_cursor}|, {complete_event=}, complete_state={self._tree.current_prompt.default_buffer.complete_state}, cursor_pos={document.cursor_position}')
 
-        if document.text.startswith('/'):
-            new_doc = Document(
-                document.text[1:].replace('/', ' '),
-                cursor_position=document.cursor_position - 1,
-            )
-            yield from self._tree.root_command.completer.get_completions(new_doc, complete_event)
-        else:
-            new_doc = Document(
-                document.text.replace('/', ' '),
-                cursor_position=document.cursor_position,
-            )
-            yield from self.current_completer.get_completions(new_doc, complete_event)
+        command, _, command_len = self._tree.get_command(document.text, partial=True)
+        new_pos = document.cursor_position - command_len
+        print_in_terminal(f'\nCommand is: {command.path}, len={command_len}, {new_pos=}', )
+        if command_len and not new_pos and (document.text[document.cursor_position - 1] != '/'):
+            return
+
+        document = Document(
+            document.text[command_len:],
+            cursor_position=new_pos
+        )
+        yield from command.completer.get_completions(document, complete_event)
 
 
 class AutoTreeCompleter(TreeCompleter):
@@ -126,6 +119,74 @@ class AutoTreeCompleter(TreeCompleter):
         raise ValueError('Cannot set a current completer on an AutoTreeCompleter')
 
 
+class CommandCompleter(WordCompleter):
+
+    def __init__(
+        self,
+        options_with_extra: Mapping[str, NestedCompleterWithExtra.Option],
+        *args: Any,
+        path: str,
+        arguments: Iterable[NestedCompleterWithExtra.Argument] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        self._display_dict: dict[str, AnyFormattedText] = {}
+        self._meta_dict: dict[str, AnyFormattedText] = {}
+        self._hidden: dict[str, Completer | None] = {}
+        options: dict[str, Completer | None] = {}
+        self._path = path
+
+        for name, (option, display, meta, opt_kwargs, is_group) in options_with_extra.items():
+            # if is_group:
+            #     name += '/'
+            # else:
+            #     name += ' '
+
+            if opt_kwargs.get('hidden', False):
+                self._hidden[name] = option
+            else:
+                options[name] = option
+                self._display_dict[name] = display
+                self._meta_dict[name] = meta
+
+        self._arguments: list[Completion] = []
+        if arguments:
+            for text, display, meta, arg_kwargs in arguments:
+                if arg_kwargs.get('hidden', False):
+                    continue
+
+                self._arguments.append(Completion(
+                    text=text,
+                    start_position=0,
+                    display=display,
+                    display_meta=meta,
+                ))
+
+        super().__init__(
+            *args,
+            words=list(options.keys()),
+            display_dict=self._display_dict,
+            meta_dict=self._meta_dict,
+            **kwargs
+        )
+
+    def get_completions(
+        self,
+        document: Document,
+        complete_event: CompleteEvent
+    ) -> Iterator[Completion]:
+        text = document.text_before_cursor.lstrip()
+        print_in_terminal(f'\nFor path {self._path}: |{document.text=}| ; |{text=}|')
+
+        yield from super().get_completions(document, complete_event)
+
+        # if not document.text:
+        nargs = len([term for term in text.split() if '=' not in term])
+        print_in_terminal(f'\n{nargs=}')
+        for arg in self._arguments[nargs:]:
+            print_in_terminal('yielding arg', arg)
+            yield arg
+
+
 class NestedCompleterWithExtra(NestedCompleter):
 
     if TYPE_CHECKING:
@@ -133,9 +194,11 @@ class NestedCompleterWithExtra(NestedCompleter):
             Completer | None,  # Option
             AnyFormattedText,  # Display
             AnyFormattedText,  # Meta
-            dict[str, Any]  # Option kwargs
+            dict[str, Any],  # Option kwargs
+            bool,  # Is group
         ]
         Argument: TypeAlias = tuple[
+            str,  # Text
             AnyFormattedText,  # Display
             AnyFormattedText,  # Meta
             dict[str, Any]  # Option kwargs
@@ -153,7 +216,7 @@ class NestedCompleterWithExtra(NestedCompleter):
         self._hidden: dict[str, Completer | None] = {}
         options: dict[str, Completer | None] = {}
 
-        for name, (option, display, meta, opt_kwargs) in options_with_extra.items():
+        for name, (option, display, meta, opt_kwargs, _) in options_with_extra.items():
             if opt_kwargs.get('hidden', False):
                 self._hidden[name] = option
             else:
@@ -163,12 +226,12 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         self._arguments: list[Completion] = []
         if arguments:
-            for display, meta, arg_kwargs in arguments:
+            for text, display, meta, arg_kwargs in arguments:
                 if arg_kwargs.get('hidden', False):
                     continue
 
                 self._arguments.append(Completion(
-                    text='',
+                    text=text,
                     start_position=0,
                     display=display,
                     display_meta=meta,
@@ -346,9 +409,11 @@ class Node:
                     markup_mode=getattr(node.command, 'rich_markup_mode', None),
                 )),
                 dict(hidden=node.command.hidden),
+                bool(node.children),
             )
 
-        self.completer = NestedCompleterWithExtra(dict(completion_dict))
+        # self.completer = NestedCompleterWithExtra(dict(completion_dict))
+        self.completer = CommandCompleter(dict(completion_dict), path=str(self.path))
 
     def _make_command_completer(self) -> None:
         completion_dict: dict[str, NestedCompleterWithExtra.Option] = {}
@@ -369,7 +434,6 @@ class Node:
                 metavar_str = 'FLAG'
             if metavar_str:
                 metavar_text.append(metavar_str)
-                metavar_text.append(' ')
 
             # Range
             try:
@@ -381,10 +445,11 @@ class Node:
                 ):
                     range_str = param.type._describe_range()
                     if range_str:
-                        metavar_text.append(f'[{range_str}] ')
+                        metavar_text.append(f'[{range_str}]')
             except AttributeError:
                 # click.types._NumberRangeBase is only in Click 8x onwards
                 pass
+            metavar_text.append(' ')
 
             # Default
             default_text = Text(style='magenta dim')
@@ -434,6 +499,7 @@ class Node:
                         display,
                         meta_str,
                         dict(hidden=param.hidden),
+                        False,
                     )
 
                     break  # Only one per param
@@ -448,15 +514,21 @@ class Node:
                     hidden = False
 
                 argument_list.append((
+                    param.human_readable_name,
                     display,
                     meta_str,
                     dict(hidden=hidden),
                 ))
 
-        self.completer = NestedCompleterWithExtra(completion_dict, arguments=argument_list)
+        # self.completer = NestedCompleterWithExtra(completion_dict, arguments=argument_list)
+        self.completer = CommandCompleter(
+            completion_dict, arguments=argument_list, path=str(self.path))
 
 
 class CommandTree:
+
+    if TYPE_CHECKING:
+        Prefix: TypeAlias = Callable[[str, int, bool], tuple[Node, str, int]]
 
     ROOT_PATH = Path('/')
 
@@ -470,10 +542,10 @@ class CommandTree:
             command=root_command,
         )
         self._pointer = self._root
-        self._current_completer: Completer | None = None
-        self._completer = FuzzyCompleter(AutoTreeCompleter(self))
+        self.current_prompt: PromptSession[str] | None = None
+        self.use_fuzzy_completer = True
 
-        self._prefixes: dict[str, Callable[[str], tuple[Node, str]]] = {}
+        self._prefixes: dict[str, CommandTree.Prefix] = {}
         self.add_prefix('help', self._help_prefix)
         self.add_prefix('?', self._help_prefix)
 
@@ -494,7 +566,6 @@ class CommandTree:
 
     def goto(self, command: Node) -> None:
         self._pointer = command
-        self._current_completer = None
 
     @property
     def current_command(self) -> Node:
@@ -512,53 +583,171 @@ class CommandTree:
     def completer(self) -> Completer:
         return self._completer
 
-    def add_prefix(self, name: str, callback: Callable[[str], tuple[Node, str]]) -> None:
+    @completer.setter
+    def completer(self, value: Completer) -> None:
+        self._completer = value
+        if self.current_prompt:
+            self.current_prompt.completer = value
+
+    @property
+    def use_fuzzy_completer(self) -> bool:
+        return isinstance(self._completer, FuzzyCompleter)
+
+    @use_fuzzy_completer.setter
+    def use_fuzzy_completer(self, value: bool) -> None:
+        if value:
+            self.completer = FuzzyCompleter(AutoTreeCompleter(self))
+        else:
+            self.completer = AutoTreeCompleter(self)
+
+    def add_prefix(self, name: str, callback: CommandTree.Prefix) -> None:
         self._prefixes[name] = callback
 
-    def _help_prefix(self, args: str) -> tuple[Node, str]:
-        if args.strip():
-            command, _ = self.get_command(args, prefix_enabled=False)
+    def _help_prefix(self, prompt: str, command_len: int, partial: bool) -> tuple[Node, str, int]:
+        remain = prompt[command_len:]
+        if remain.strip():
+            command, _, new_command_len = self.get_command(
+                remain, prefix_enabled=False, partial=partial)
         else:
             command = self._pointer
+            new_command_len = 0
 
-        return command, '--help'
+        return command, '--help', (command_len + new_command_len)
 
     def __getitem__(self, name: str) -> tuple[Node, str]:
-        return self.get_command(name, prefix_enabled=True)
+        return self.get_command(name, prefix_enabled=True)[:2]
 
-    def get_command(self, prompt: str, prefix_enabled: bool = True) -> tuple[Node, str]:
+    def get_command(
+        self,
+        prompt: str,
+        prefix_enabled: bool = True,
+        partial: bool = False,
+    ) -> tuple[Node, str, int]:
+        '''Parse a user prompt input into a command and its args.
+
+        Supports hiearchy navigation UNIX-like. But also supports to replace
+        the "/" with " ".
+
+        Supports comments with "#".
+
+        Supports prefixes (special commands) added with add_prefix() (defaults are "help" and "?").
+
+        Supports getting partial answer (ie. avoid failing on KeyError) when the last part of the
+        command is unknown, which typically happens in interactive session as user type it in.
+
+        Args:
+            prompt: The user input. Or whatever command path if you use it programmatically.
+            prefix_enabled (optional, defaults to True): If True, authorise the input to have one of
+              the declared prefixes.
+            partial (optional, defaults to False): If True, will not raise KeyError if the last part
+              is not resolved. Instead, it will return the command that has been resolved so far.
+
+        Raises:
+            KeyError:
+                When the specified command is unknown.
+
+        Returns:
+            Returns a tuple with three elements:
+                - First: The resolved Command object
+                - Second: The arguments to the command (or, when using partial, the unresolved part)
+                - Third: The length of the command (including the separating space(s) if there are
+                  args, but not including it(them) if there are no args)
+        '''
+        # Handle comments
         if '#' in prompt:
             prompt = prompt[:prompt.index('#')]
 
-        fields = prompt.strip().split(' ', maxsplit=1)
-        command = fields.pop(0)
-        args = fields.pop() if fields else ''
+        # We need to keep a reference to the original string.
+        original = prompt
+        # prompt will be our working/running string as we iterate through the command
+        prompt = prompt.strip().replace(' ', '/')
+        # command_len represents delimitation index between command and args in the original string
+        command_len = 0
 
+        # Init pointer. If prompt starts with /, then we get the root pointer.
+        # Else, it's the current pointer.
         pointer = self._pointer
-        if command.startswith('/'):
+        if original.lstrip().startswith('/'):
             pointer = self._root
+            command_len = original.index('/') + 1
+            prompt = prompt[1:]
 
-        while command:
-            fields = command.lstrip('/').split('/', maxsplit=1)
-            subpath = fields.pop(0)
-            command = fields.pop() if fields else ''
+        # Loop to parse the command part
+        while prompt:
+            previous_command_len = command_len  # Save it for partial case
+            fields = prompt.split('/', maxsplit=1)
+            command = fields.pop(0)
 
-            if subpath == '..':
+            # If we only have / (or even possibly a space in the original),
+            # then the line updating command_len just below would not catch it
+            # and wouldn't increment it correctly.
+            if prompt[0] == '/':
+                command_len += 1
+
+            # If index fails (ValueError), our algo is wrong, and it's a bug
+            command_len = original.index(command, command_len) + len(command)
+
+            # If split did actually swallow a real /, then we need to account for it
+            if command and (len(original) > command_len) and (original[command_len] == '/'):
+                command_len += 1
+
+            # The rest remaining to process in next iteration
+            prompt = fields.pop() if fields else ''
+
+            # Pointer advancement, and special cases of ., .., /, '', and prefixes
+            if command == '..':
                 pointer = pointer.parent if pointer.parent else pointer
-            elif subpath:  # If not, do nothing. Handles case of just '/'
+            elif command and (command != '.'):  # If not, do nothing. Handles case of just '/'.
                 try:
-                    pointer = pointer.children[subpath]
+                    pointer = pointer.children[command]
                 except KeyError:
-                    if prefix_enabled and (not command) and (subpath in self._prefixes):
-                        return self._prefixes[subpath](args)
+                    if prefix_enabled and (command in self._prefixes):
+                        if (len(original) > command_len) and (original[command_len] != ' '):
+                            # Lack space after prefix. Disregard partial here.
+                            raise
+                        # Delegate prefix processing to its callback.
+                        # This is likely to call get_command() again to parse
+                        # the rest of the prompt.
+                        return self._prefixes[command](original, command_len, partial)
+                    elif partial:
+                        # Case of partially written command (interactive user input).
+                        # We still want to return the valid command portion we got so far.
+                        command_len = previous_command_len
+                        break
                     else:
                         raise
+
+            # We had at least one valid command, prefixes are therefore no longer possible
             prefix_enabled = False
 
+            # No more command subpath down in that hierarchy. Exit loop with pointer representing
+            # the actual full (leaf) command, and with command_len pointing to the index
+            # position in the original string where arguments starts (almost).
             if not pointer.children:
                 break
 
-        return pointer, args
+        # print_in_terminal(
+        #     'get_command', pointer.path, original, command_len, original[command_len:])
+
+        # Consume / at the end of the command part
+        for char in original[command_len:]:
+            if char == '/':
+                command_len += 1
+            elif char == ' ':
+                break
+            elif partial:
+                # Case of partially written command using / as separator
+                break
+            else:
+                # This case corresponds to args separated from the command using /
+                raise KeyError(original[command_len:])
+
+        args = original[command_len:].strip()
+        if args:
+            # Count the separating space(s) only if we do have args
+            command_len = original.index(args, command_len)
+
+        return pointer, args, command_len
 
     def make_prompt_session(self, **prompt_kwargs: Any) -> PromptSession[str]:
         prompt_kwargs.setdefault('message', self.prompt_message)
@@ -578,12 +767,16 @@ class CommandTree:
         ]
 
     def repl(self, session: PromptSession[str], **prompt_kwargs: Any) -> None:
-        input = session.prompt(**prompt_kwargs)
+        self.current_prompt = session
+        try:
+            input = session.prompt(**prompt_kwargs)
+        finally:
+            self.current_prompt = None
 
         try:
             command, args = self[input]
-        except KeyError:
-            rprint('[red]Command not found:[/]', input, file=sys.stderr)
+        except KeyError as ex:
+            rprint('[red]Command not found:[/]', ex.args[0], file=sys.stderr)
             return
 
         if command.children and not args:

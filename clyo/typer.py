@@ -268,11 +268,17 @@ class ClyoTyper(typer.Typer):
 
     def set_main_callback(
         self, NAME, *,
-        config=None, default_config_path=None,
-        default_command=None
+        config=None, default_config_path=None, default_command=None,
+        rich_tracebacks=True, tracebacks_show_locals=True, tracebacks_suppress=None,
     ):
         if default_config_path is None:
             default_config_path = Path(typer.get_app_dir(NAME)) / 'config.cfg'
+        if tracebacks_suppress is None:
+            tracebacks_suppress = []
+        tracebacks_suppress.append('typer')
+        tracebacks_suppress.append('click')
+        self.pretty_exceptions_enable = rich_tracebacks
+        self.pretty_exceptions_show_locals = tracebacks_show_locals
 
         @self.callback(invoke_without_command=(default_command is not None))
         def cli_base(
@@ -301,9 +307,9 @@ class ClyoTyper(typer.Typer):
 
             # Make console logging attractive
             console_handler = RichHandler(
-                rich_tracebacks=True,
-                tracebacks_suppress=[typer, click],
-                tracebacks_show_locals=True
+                rich_tracebacks=rich_tracebacks,
+                tracebacks_suppress=tracebacks_suppress,
+                tracebacks_show_locals=tracebacks_show_locals,
             )
             root_logger.addHandler(console_handler)
 

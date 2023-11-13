@@ -9,7 +9,8 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version:
+          - '3.11'
       fail-fast: false
 
     steps:
@@ -26,6 +27,7 @@ jobs:
       run: |
         make style
     - name: Typing check with mypy
+      if: ${{ matrix.python-version == '3.11' }}
       run: |
         make typing
     - name: Test with pytest
@@ -35,3 +37,4 @@ jobs:
     #   run : |
     #     pip install codecov
     #     codecov --token=<PROJECT-TOKEN>
+

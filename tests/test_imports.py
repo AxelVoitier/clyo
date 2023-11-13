@@ -1,12 +1,16 @@
-# Copyright (c) 2019 Contributors as noted in the AUTHORS file
+# Copyright (c) 2022 Contributors as noted in the AUTHORS file
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# spell-checker:enableCompoundWords
+from __future__ import annotations
 
 # System imports
 import importlib
 import os
+from collections.abc import Container, Generator
 
 # Third-party imports
 import pytest
@@ -14,13 +18,16 @@ import pytest
 # Local imports
 
 
-def list_packages_in_folder(root_package_folder, ignores=None):
+def list_packages_in_folder(
+    root_package_folder: str,
+    ignores: Container[str] | None = None
+) -> Generator[str, None, None]:
     if ignores is None:
         ignores = []
 
     basefolder = os.path.dirname(root_package_folder) + '/'
 
-    def convert_folder_to_package(foldername):
+    def convert_folder_to_package(foldername: str) -> str:
         return foldername.replace(basefolder, '').replace('/', '.')
 
     for dirpath, dirnames, filenames in os.walk(root_package_folder):
@@ -53,7 +60,7 @@ def list_packages_in_folder(root_package_folder, ignores=None):
             pass
 
 
-def relative_path(base_filepath, *subpaths):
+def relative_path(base_filepath: str, *subpaths: str) -> str:
     return os.path.abspath(os.path.join(os.path.dirname(base_filepath), *subpaths))
 
 
@@ -64,5 +71,5 @@ def relative_path(base_filepath, *subpaths):
         ]
     )
 )
-def test_imports(module_name):
+def test_imports(module_name: str) -> None:
     assert importlib.import_module(module_name)

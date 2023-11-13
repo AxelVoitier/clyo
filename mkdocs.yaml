@@ -1,0 +1,135 @@
+site_name: Clyo
+site_url: https://github.com/AxelVoitier/clyo
+repo_url: https://github.com/AxelVoitier/clyo
+repo_name: gh:AxelVoitier/clyo
+edit_uri: edit/main/docs/
+site_description: Give your Python scripts various flavours of CLI!
+site_author: Axel Voitier
+copyright: Copyright &copy; 2022 Clyo's Authors
+
+# spell-checker: disable
+
+watch:
+  - '.'
+
+theme:
+  # icon:
+  #   logo: ...
+
+  language: en
+
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-2
+        name: Switch to light mode
+      primary: light blue
+      accent: cyan
+
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-5
+        name: Switch to dark mode
+      primary: amber
+      accent: orange
+
+  font:
+    # text: Ubuntu
+    code: Ubuntu Mono
+
+  features:
+    - navigation.instant  # No reload between pages, use XHR
+    # - navigation.tracking  # Update URL with scroll
+    - navigation.tabs  # Top-level nav as tabs in header
+    # - navigation.tabs.sticky  # Header tabs don't dissapear when scrolling down
+    - navigation.top  # Back-to-top button
+    - navigation.sections  # Group sections in the sidebar
+    # - navigation.expand  # Expand all collapsible navigation sub-sections
+    - navigation.path  # Breadcrumb
+    - navigation.indexes  # Intermediate section levels can have their own pages
+    - toc.follow  # TOC sidebar follows scroll
+    # - toc.integrate  # Merge TOC into navigation sidebar
+    - search.suggest  # Suggest search completion
+    - search.highlight  # Highlight search results in the page
+    # - search.share  # Can create/copy share link for searched
+    # - header.autohide  # Collapse header entirely as scrolling down
+    - navigation.footer  # Prev/Next links at the bottom
+    - content.action.edit  # Top-right (middle column) edit icon
+    - content.action.view  # Top-right (middle column) view raw icon
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - sane_lists
+  - smarty:
+      smart_angled_quotes: True
+  - toc:
+      permalink: True
+  - wikilinks
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - git-revision-date-localized:
+      enabled: !ENV [ENABLE_PROD, True]
+      type: date
+      enable_creation_date: true
+      fallback_to_build_date: true  # For generated pages
+  - literate-nav:
+      nav_file: nav.md
+      implicit_index: true
+  - section-index
+  - social:
+      cards: !ENV [ENABLE_PROD, True]
+  # - tags
+  - mkdocstrings:
+      handlers:
+        python:
+          import:
+            - https://docs.python.org/3/objects.inv
+          options:
+            # show_root_heading: true
+            show_root_toc_entry: false
+            show_category_heading: true
+            # show_if_no_docstring: true
+            # show_signature_annotations: true
+            separate_signature: true
+            # show_source: false
+
+extra:
+  version:
+    provider: mike
+    default:
+      - latest
+      - dev
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AxelVoitier
+      name: Axel Voitier on GitHub
+
+extra_css:
+  - stylesheets/extra.css

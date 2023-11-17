@@ -13,8 +13,13 @@ watch:
   - '.'
 
 theme:
-  # icon:
-  #   logo: ...
+  icon:
+    # logo: ...
+    admonition:
+      since: material/tag-plus
+      modified: material/tag-text
+      deprecated: material/tag-minus
+      removed: material/tag-off
 
   language: en
 
@@ -73,7 +78,8 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      linenums_style: pymdownx-inline
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.snippets:
@@ -107,10 +113,14 @@ plugins:
       cards: !ENV [ENABLE_PROD, True]
   # - tags
   - mkdocstrings:
+      custom_templates: doc_templates
       handlers:
         python:
           import:
-            - https://docs.python.org/3/objects.inv
+            - url: https://docs.python.org/3/objects.inv
+              domains:
+                - py
+                - std
           options:
             # show_root_heading: true
             show_root_toc_entry: false
@@ -133,3 +143,4 @@ extra:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/custom.css

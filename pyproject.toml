@@ -1,0 +1,114 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clyo"
+description = "Give your Python scripts various flavours of CLI!"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Axel Voitier", email = "axel.voitier@gmail.com" },
+]
+requires-python = "~=3.11"
+# keywords = []
+classifiers = [
+  # "Development Status :: 1 - Planning",
+  # "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
+  # "Development Status :: 4 - Beta",
+  # "Development Status :: 5 - Production/Stable",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  # Py 3.11 EOL: 2027/10
+  "Programming Language :: Python :: 3.11",
+  # Py 3.12 EOL: 2028/10
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Typing :: Typed",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dynamic = ["version"]
+dependencies = [
+  "typer[all]",
+  "prompt_toolkit",
+]
+
+# [project.optional-dependencies]
+# an_extra = [ ]
+
+# [project.scripts]
+# clyo-cli = "clyo.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/AxelVoitier/clyo"
+Documentation = "https://github.com/AxelVoitier/clyo#readme"
+Issues = "https://github.com/AxelVoitier/clyo/issues"
+Source = "https://github.com/AxelVoitier/clyo.git"
+
+[tool.hatch.version]
+path = "clyo/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "clyo",
+  "tests",
+  "docs",
+  "doc_template",
+  "mkdocs.yaml",
+  ".flake8",
+  "*.md",
+]
+
+[tool.hatch.build.targets.wheel]
+package = "clyo"
+
+[tool.hatch.envs.test]
+dependencies = [
+  "flake8",
+  "autopep8",
+  "pytest",
+  "pytest-cov",
+  "pytest-html",
+  "mypy",
+  "check-manifest",
+]
+
+[tool.hatch.envs.test.scripts]
+style = "flake8 clyo tests"
+typing = "mypy clyo tests"
+tests = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml tests"
+tests-x = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml -x tests"
+qa = [
+  "- style",
+  "- typing",
+  "tests",
+]
+
+[tool.hatch.envs.doc]
+detached = true
+dependencies = [
+  "mkdocs",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "mkdocs-gen-files",
+  "mkdocs-literate-nav",
+  "mkdocs-section-index",
+  "pillow",
+  "cairosvg",
+  "mike",
+  "mkdocs-git-revision-date-localized-plugin",
+]
+
+[tool.hatch.envs.dos.scripts]
+serve-doc = "ENABLE_PROD=False mkdocs serve"
+
+[tool.mypy]
+show_column_numbers = true
+show_error_context = false
+strict = true
+ignore_missing_imports = false

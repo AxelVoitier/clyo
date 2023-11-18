@@ -7,18 +7,18 @@
 # System imports
 
 # Third-party imports
-from typer import Argument, Option, Abort
+from typer import Abort, Argument, Option
 
 # Local imports
 from .prompt import CommandTree
 from .typer import ClyoTyper, ClyoTyperGroup
 
 # Aliases for easier migration
-Typer = ClyoTyper
-TyperGroup = ClyoTyperGroup
+Typer = Clyo = ClyoTyper
+TyperGroup = ClyoGroup = ClyoTyperGroup
 
 __all__ = [
     'CommandTree',
-    'ClyoTyper', 'ClyoTyperGroup', 'Typer', 'TyperGroup',
+    'ClyoTyper', 'ClyoTyperGroup', 'Typer', 'TyperGroup', 'Clyo', 'ClyoGroup',
     'Argument', 'Option', 'Abort',
 ]

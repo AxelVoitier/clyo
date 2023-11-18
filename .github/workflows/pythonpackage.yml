@@ -39,7 +39,6 @@ jobs:
         hatch run pep8:check
 
     - name: Typing check with pyright and mypy
-      # if: ${{ matrix.python-version == '3.11' }}
       run: |
         hatch run typing:check
 

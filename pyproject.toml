@@ -59,7 +59,7 @@ include = [
   "clyo",
   "tests",
   "docs",
-  "doc_template",
+  "doc_templates",
   "mkdocs.yaml",
   ".flake8",
   "*.md",

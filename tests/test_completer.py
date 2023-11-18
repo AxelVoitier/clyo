@@ -221,8 +221,10 @@ if TYPE_CHECKING:
         ('/', '////level1A////level2B////command6//', '/level1A/level2B/command6', 36, ''),
         ('/', ' // //level1A/ / / /level2B/  ///command6//  ', '/level1A/level2B/command6', 43, ''),
         ('/', 'level1A level2B command6/// ///', '/level1A/level2B/command6', 28, '///'),
-        ('/', 'level1A level2B command6 --arg1 --a-rg2=ah', '/level1A/level2B/command6', 25, '--arg1 --a-rg2=ah'),
-        pytest.param('/', 'level1A level2B command6/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
+        ('/', 'level1A level2B command6 --arg1 --a-rg2=ah',
+         '/level1A/level2B/command6', 25, '--arg1 --a-rg2=ah'),
+        pytest.param('/', 'level1A level2B command6/arg', '', 0, '',
+                     marks=pytest.mark.xfail(raises=KeyError)),
 
         # Navigating hierarchy
         ('/level1A', '', '/level1A', 0, ''),
@@ -535,7 +537,7 @@ def test_a(
                     # Special case when it's fuzzy and we start to type,
                     # apparently it removes special characters like < and >.
                     # Since we use this fixture form only for <ARGS>,
-                    # this special treatment is easy.
+                    # this special treatment is easy.
                     assert completion.text == fix_text[0]
                 else:
                     assert completion.text == fix_text[0]

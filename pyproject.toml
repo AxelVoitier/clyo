@@ -10,7 +10,7 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Axel Voitier", email = "axel.voitier@gmail.com" },
 ]
-requires-python = "~=3.11"
+requires-python = "~=3.8"
 # keywords = []
 classifiers = [
   # "Development Status :: 1 - Planning",
@@ -22,10 +22,11 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  # Py 3.11 EOL: 2027/10
-  "Programming Language :: Python :: 3.11",
-  # Py 3.12 EOL: 2028/10
-  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.8",  # Py3.8 EOL: 2024/10
+  "Programming Language :: Python :: 3.9",  # Py 3.9 EOL: 2025/10
+  "Programming Language :: Python :: 3.10",  # Py 3.10 EOL: 2026/10
+  "Programming Language :: Python :: 3.11",  # Py 3.11 EOL: 2027/10
+  "Programming Language :: Python :: 3.12",  # Py 3.12 EOL: 2028/10
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
   "Typing :: Typed",
@@ -67,30 +68,54 @@ include = [
 [tool.hatch.build.targets.wheel]
 package = "clyo"
 
-[tool.hatch.envs.test]
+[tool.hatch.envs.pep8]
 dependencies = [
   "flake8",
   "autopep8",
+]
+
+[tool.hatch.envs.pep8.scripts]
+check = "flake8 clyo tests"
+
+[tool.hatch.envs.typing]
+dependencies = [
+  "mypy",
+  "pyright",
+  "pytest",  # Because it is imported in test files
+]
+
+[tool.hatch.envs.typing.scripts]
+check-pyright = "pyright clyo tests"
+check-mypy = "mypy clyo tests"
+check = [
+  "check-pyright",
+  "check-mypy",
+]
+
+[[tool.hatch.envs.typing.matrix]]
+python = [
+  "3.11",
+  "3.12",
+]
+
+[tool.hatch.envs.tests]
+dependencies = [
   "pytest",
   "pytest-cov",
   "pytest-html",
-  "mypy",
-  "pyright",
-  "check-manifest",
 ]
 
-[tool.hatch.envs.test.scripts]
-style = "flake8 clyo tests"
-typing = [
-  "pyright clyo tests",
-  "mypy clyo tests",
-]
-tests = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml tests"
-tests-x = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml -x tests"
-qa = [
-  "- style",
-  "- typing",
-  "tests",
+[tool.hatch.envs.tests.scripts]
+run = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml tests"
+run-x = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml -x tests"
+
+[[tool.hatch.envs.tests.matrix]]
+python = [
+  "3.8",
+  "3.9",
+  "3.10",
+  "3.11",
+  "3.12",
 ]
 
 [tool.hatch.envs.doc]
@@ -108,8 +133,9 @@ dependencies = [
   "mkdocs-git-revision-date-localized-plugin",
 ]
 
-[tool.hatch.envs.dos.scripts]
-serve-doc = "ENABLE_PROD=False mkdocs serve"
+[tool.hatch.envs.doc.scripts]
+build = "mkdocs build --clean --strict"
+serve = "ENABLE_PROD=False mkdocs serve --dev-addr localhost:8000"
 
 [tool.mypy]
 show_column_numbers = true

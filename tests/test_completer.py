@@ -508,7 +508,7 @@ command1_params: list[CompletionFixture] = [
         # (None, '/', 'help/', []),
     ]
 )
-def test_a(
+def test_completion(
     command_tree: CommandTree,
     fuzzy: bool | None,
     path: str,
@@ -549,5 +549,3 @@ def test_a(
             assert completion.display_meta_text.strip() == fix_meta
 
         assert not results, results
-
-    # assert False

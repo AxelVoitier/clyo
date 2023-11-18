@@ -93,7 +93,12 @@ class TreeCompleter(Completer):
         document: Document,
         complete_event: CompleteEvent
     ) -> Iterator[Completion]:
-        print_in_terminal(f'\n---------\nNew completion: |{document.text}|, |{document.text_before_cursor}|, {complete_event=}, complete_state={self._tree.current_prompt.default_buffer.complete_state}, cursor_pos={document.cursor_position}')
+        # print_in_terminal(
+        #     f'\n---------\nNew completion: |{document.text}|, |{document.text_before_cursor}|, '
+        #     f'{complete_event=}, '
+        #     f'complete_state={self._tree.current_prompt.default_buffer.complete_state}, '
+        #     f'cursor_pos={document.cursor_position}'
+        # )
 
         command, _, command_len = self._tree.get_command(document.text, partial=True)
         new_pos = document.cursor_position - command_len
@@ -415,7 +420,7 @@ class Node:
         # self.completer = NestedCompleterWithExtra(dict(completion_dict))
         self.completer = CommandCompleter(dict(completion_dict), path=str(self.path))
 
-    def _make_command_completer(self) -> None:
+    def _make_command_completer(self) -> None:  # noqa: C901
         completion_dict: dict[str, NestedCompleterWithExtra.Option] = {}
         argument_list: list[NestedCompleterWithExtra.Argument] = []
         markup_mode: rich_utils.MarkupMode = getattr(self.command, 'rich_markup_mode', None)
@@ -617,7 +622,7 @@ class CommandTree:
     def __getitem__(self, name: str) -> tuple[Node, str]:
         return self.get_command(name, prefix_enabled=True)[:2]
 
-    def get_command(
+    def get_command(  # noqa: C901
         self,
         prompt: str,
         prefix_enabled: bool = True,

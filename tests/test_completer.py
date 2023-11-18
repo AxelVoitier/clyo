@@ -58,7 +58,11 @@ def unformat(text: FormattedText) -> str:
 
 def print_completion(completion: Completion) -> None:
     print(completion)
-    print(f"{type(completion).__name__}(text='{completion.text}', display='{completion.display}', display_text='{completion.display_text}', start_position={completion.start_position}, display_meta='{unformat(completion.display_meta)}')")
+    print(
+        f"{type(completion).__name__}(text='{completion.text}', display='{completion.display}', "
+        f"display_text='{completion.display_text}', start_position={completion.start_position}, "
+        f"display_meta='{unformat(completion.display_meta)}')"
+    )
 
 
 if TYPE_CHECKING:
@@ -160,10 +164,14 @@ if TYPE_CHECKING:
         ('/', 'level1A/command1 arg', '/level1A/command1', 17, 'arg'),
         ('/', '/level1A/command1 arg', '/level1A/command1', 18, 'arg'),
         ('/', 'level1A   command1   arg', '/level1A/command1', 21, 'arg'),
-        pytest.param('/', 'level1A command1/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', '/level1A/command1/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', 'level1A command1////arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', '/level1A/command1////arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
+        pytest.param('/', 'level1A command1/arg', '', 0, '',
+                     marks=pytest.mark.xfail(raises=KeyError)),
+        pytest.param('/', '/level1A/command1/arg', '', 0, '',
+                     marks=pytest.mark.xfail(raises=KeyError)),
+        pytest.param('/', 'level1A command1////arg', '', 0, '',
+                     marks=pytest.mark.xfail(raises=KeyError)),
+        pytest.param('/', '/level1A/command1////arg', '', 0, '',
+                     marks=pytest.mark.xfail(raises=KeyError)),
         ('/', 'level1A command1 /arg', '/level1A/command1', 17, '/arg'),
         ('/', '/level1A/command1 /arg', '/level1A/command1', 18, '/arg'),
         ('/', 'level1A command1/ /arg', '/level1A/command1', 18, '/arg'),

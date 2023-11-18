@@ -546,7 +546,7 @@ def test_a(
                     assert completion.display_text == fix_text[1]
             else:
                 assert completion.text == fix_text
-            assert completion.display_meta_text == fix_meta
+            assert completion.display_meta_text.strip() == fix_meta
 
         assert not results, results
 

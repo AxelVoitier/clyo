@@ -36,7 +36,7 @@ pip install clyo
 
 ### Quick trial
 
-Clyo can be use as a drop-in replacement to [typer](https://github.com/tiangolo/typer):
+Clyo can be used as a drop-in replacement to [typer](https://github.com/tiangolo/typer):
 ```python
 from clyo import Clyo as Typer, Argument, Option
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     cli(prog_name=NAME)
 ```
 
-Now if your invoke your tool without any command, it will start the prompt.
+Now if you invoke your tool without any command, it will start the prompt.
 
 You can also customise the prompt either by manipulating the session object, or by passing
 some of the [prompt-toolkit `prompt()` arguments](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/reference.html#prompt_toolkit.shortcuts.prompt) to the `repl()` method.

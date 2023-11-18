@@ -4,6 +4,8 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# spell-checker:ignore subcli
 from __future__ import annotations
 
 # System imports
@@ -114,7 +116,7 @@ subcli_A.add_typer(
 
 
 @subcli_AA.command()
-def command3(arg1, opt_arg1=False) -> None:
+def command3(arg1: str, opt_arg1: bool = False) -> None:
     'Third command'
     print('Third command')
     print(f'{arg1=} ; {opt_arg1=}')

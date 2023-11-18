@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from typing import TypeAlias
 
 # Third-party imports
@@ -25,7 +26,7 @@ import pytest
 import typer
 from prompt_toolkit.completion import CompleteEvent, Completion
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.formatted_text import StyleAndTextTuples
 from rich import print
 
 from clyo import ClyoTyper, CommandTree
@@ -52,7 +53,7 @@ def command_tree(cli: ClyoTyper) -> CommandTree:
     return command_tree
 
 
-def unformat(text: FormattedText) -> str:
+def unformat(text: StyleAndTextTuples) -> str:
     return ''.join(map(itemgetter(1), text))
 
 
@@ -275,7 +276,7 @@ def test_get_command(
     fix_len: int,
     fix_args: str,
 ) -> None:
-    command_tree.path = path
+    command_tree.path = path  # type: ignore[assignment]
 
     command, args, command_len = command_tree.get_command(text, True)
     print(f'{command.name=}, {command.path=!s}, {command_len=}, {args=}')
@@ -514,7 +515,8 @@ def test_a(
     text: str,
     fixtures: list[CompletionFixture]
 ) -> None:
-    command_tree.path = path
+    command_tree.path = path  # type: ignore[assignment]
+    fuzzies: Iterable[bool]
     if fuzzy is None:
         fuzzies = (False, True)
     else:

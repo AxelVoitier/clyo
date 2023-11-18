@@ -75,12 +75,16 @@ dependencies = [
   "pytest-cov",
   "pytest-html",
   "mypy",
+  "pyright",
   "check-manifest",
 ]
 
 [tool.hatch.envs.test.scripts]
 style = "flake8 clyo tests"
-typing = "mypy clyo tests"
+typing = [
+  "pyright clyo tests",
+  "mypy clyo tests",
+]
 tests = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml tests"
 tests-x = "py.test --cov=clyo --cov-report=term-missing --cov-report=xml:cov.xml -x tests"
 qa = [

@@ -3,7 +3,10 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
+#
+# spell-checker:enableCompoundWords
+# spell-checker:words renderables
+# spell-checker:ignore maxsplit rprint rext
 # pyright: reportPrivateUsage=false
 from __future__ import annotations
 
@@ -166,7 +169,7 @@ class CommandCompleter(WordCompleter):
                     display_meta=meta,
                 ))
 
-        super().__init__(
+        super().__init__(  # type: ignore[misc]
             *args,
             words=list(options.keys()),
             display_dict=self._display_dict,
@@ -281,7 +284,7 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         elif ' ' in text:  # No subcompleter this time (eg. some parameter are given)
             # print_in_terminal(f'{terms=}')
-            remaining_text = terms[-1]  # type: ignore[reportUnboundVariable]
+            remaining_text = terms[-1]  # pyright: ignore[reportUnboundVariable]
             move_cursor = len(text) - len(remaining_text) + stripped_len
 
             new_document = Document(
@@ -331,7 +334,7 @@ class Node:
             self.path = CommandTree.ROOT_PATH / self.name
 
         if isinstance(self.command, click.Group):
-            self.children = dict(self.make_recursive(self.command, self))
+            self.children = dict(self.make_recursive(self.command, self))  # type: ignore[arg-type]
             self._make_group_completer()
         else:
             self._make_command_completer()
@@ -495,7 +498,7 @@ class Node:
                     else:
                         opt_name = f'{split_opt(opt)[1]}='
 
-                    display = None
+                    display: str | FormattedText | None = None
                     if param.required:
                         display = FormattedText([('bold', opt_name)])
 
@@ -630,7 +633,7 @@ class CommandTree:
     ) -> tuple[Node, str, int]:
         '''Parse a user prompt input into a command and its args.
 
-        Supports hiearchy navigation UNIX-like. But also supports to replace
+        Supports hierarchy navigation UNIX-like. But also supports to replace
         the "/" with " ".
 
         Supports comments with "#".

@@ -1,7 +1,17 @@
 # Clyo
 
-[![PyPI - Version](https://img.shields.io/pypi/v/clyo.svg)](https://pypi.org/project/clyo)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/clyo.svg)](https://pypi.org/project/clyo)
+[![PyPI - Version](https://img.shields.io/pypi/v/clyo?style=for-the-badge)](https://pypi.python.org/pypi/clyo)
+[![PyPI - Status](https://img.shields.io/pypi/status/clyo?style=for-the-badge)](https://pypi.python.org/pypi/clyo)
+[![PyPI - Download](https://img.shields.io/pypi/dm/clyo?style=for-the-badge)](https://pypi.python.org/pypi/clyo)
+[![PyPI - Python version](https://img.shields.io/pypi/pyversions/clyo?style=for-the-badge)](https://pypi.python.org/pypi/clyo)
+[![GitHub - License](https://img.shields.io/github/license/AxelVoitier/clyo?style=for-the-badge)](https://github.com/AxelVoitier/clyo/blob/master/LICENSE)
+
+[![Lines of code](https://img.shields.io/tokei/lines/github/AxelVoitier/clyo?style=for-the-badge)](https://github.com/AxelVoitier/clyo)
+[![GitHub - Commits since](https://img.shields.io/github/commits-since/AxelVoitier/clyo/1.0.0?style=for-the-badge)](https://github.com/AxelVoitier/clyo/commits/master)
+[![GitHub - Workflow](https://img.shields.io/github/workflow/status/AxelVoitier/clyo/Python%20package?style=for-the-badge)](https://github.com/AxelVoitier/clyo/actions)
+<!---
+[![Codecov](https://img.shields.io/codecov/c/gh/AxelVoitier/clyo?style=for-the-badge)](https://codecov.io/gh/AxelVoitier/clyo)
+--->
 
 Give your Python scripts various flavours of CLI!
 

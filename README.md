@@ -8,7 +8,7 @@
 
 [![Lines of code](https://img.shields.io/tokei/lines/github/AxelVoitier/clyo?style=for-the-badge)](https://github.com/AxelVoitier/clyo)
 [![GitHub - Commits since](https://img.shields.io/github/commits-since/AxelVoitier/clyo/1.0.0?style=for-the-badge)](https://github.com/AxelVoitier/clyo/commits/master)
-[![GitHub - Workflow](https://img.shields.io/github/workflow/status/AxelVoitier/clyo/Python%20package?style=for-the-badge)](https://github.com/AxelVoitier/clyo/actions)
+[![GitHub - Workflow](https://img.shields.io/github/actions/workflow/status/AxelVoitier/clyo/pythonpackage.yml?style=for-the-badge)](https://github.com/AxelVoitier/clyo/actions)
 <!---
 [![Codecov](https://img.shields.io/codecov/c/gh/AxelVoitier/clyo?style=for-the-badge)](https://codecov.io/gh/AxelVoitier/clyo)
 --->

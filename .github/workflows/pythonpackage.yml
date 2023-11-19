@@ -34,9 +34,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip hatch
 
-    - name: Lint with flake8
+    - name: Lint with Ruff
       run: |
-        hatch run pep8:check
+        hatch run lint:check
 
     - name: Typing check with pyright and mypy
       run: |

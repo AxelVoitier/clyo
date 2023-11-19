@@ -6,6 +6,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 # spell-checker:ignore subcli
+# ruff: noqa: T201, FBT003, N816
 from __future__ import annotations
 
 # System imports
@@ -13,10 +14,6 @@ import logging
 import sys
 from configparser import ConfigParser
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 # Third-party imports
 import typer
@@ -51,6 +48,7 @@ def root_command2(
 
 @cli.command('root3')
 def root_command3(
+    *,
     opt_arg1: str = typer.Option(False, help='An optional arg'),
     opt_arg2: str = typer.Option(..., help='A **second** *required* option arg'),
     flag1: bool = typer.Option(False, '--flag1', '--flg1', '-f', '-y', help='A flag option'),
@@ -63,10 +61,7 @@ def root_command3(
 
 
 subcli_A = clyo.Typer()
-cli.add_typer(
-    subcli_A, name='level1A', help='Sub level 1',
-    rich_help_panel='Sub CLI A for level 1'
-)
+cli.add_typer(subcli_A, name='level1A', help='Sub level 1', rich_help_panel='Sub CLI A for level 1')
 
 
 @subcli_A.command()
@@ -83,17 +78,18 @@ def command1(
 
 @subcli_A.command(deprecated=True)
 def command2(
+    *,
     opt_arg1: str = typer.Option(False, help='An optional arg'),
     opt_arg2: int = typer.Option(0, help='A second optional arg'),
     opt_arg3: int = typer.Option(0, hidden=True, help='An hidden optional arg'),
 ) -> None:
-    '''Second command (deprecated)
+    """Second command (deprecated)
 
     This has
 
     more
 
-    lines'''
+    lines"""
     print('Second command (deprecated)')
     print(f'{opt_arg1=} ; {opt_arg2=} ; {opt_arg3=}')
 
@@ -101,22 +97,25 @@ def command2(
 @subcli_A.command(hidden=True)
 def hidden_subcommand1(
     arg1: str = typer.Argument(..., help='The first arg'),
+    *,
     opt_arg1: str = typer.Option(False, help='An optional arg'),
 ) -> None:
-    '''Hidden subcommand'''
+    """Hidden subcommand"""
     print('Hidden subcommand')
     print(f'{opt_arg1=} ; {arg1=}')
 
 
 subcli_AA = clyo.Typer()
 subcli_A.add_typer(
-    subcli_AA, name='level2A', help='Sub level 2A',
-    rich_help_panel='Sub CLI A for level 2'
+    subcli_AA,
+    name='level2A',
+    help='Sub level 2A',
+    rich_help_panel='Sub CLI A for level 2',
 )
 
 
 @subcli_AA.command()
-def command3(arg1: str, opt_arg1: bool = False) -> None:
+def command3(arg1: str, *, opt_arg1: bool = False) -> None:
     'Third command'
     print('Third command')
     print(f'{arg1=} ; {opt_arg1=}')
@@ -130,8 +129,10 @@ def command4() -> None:
 
 subcli_AB = clyo.Typer(deprecated=True)
 subcli_A.add_typer(
-    subcli_AB, name='level2B', help='Sub level 2B (deprecated)',
-    rich_help_panel='Sub CLI B for level 2 (deprecated)'
+    subcli_AB,
+    name='level2B',
+    help='Sub level 2B (deprecated)',
+    rich_help_panel='Sub CLI B for level 2 (deprecated)',
 )
 
 
@@ -148,7 +149,7 @@ def command6() -> None:
 
 
 @cli.command(hidden=True)
-def prompt(fuzzy: bool = True) -> None:
+def prompt(*, fuzzy: bool = True) -> None:
     from clyo import CommandTree
 
     command_tree = CommandTree(cli)
@@ -165,8 +166,10 @@ def prompt(fuzzy: bool = True) -> None:
 
 if __name__ == '__main__':
     cli.set_main_callback(
-        NAME, config=config, default_command=prompt,
-        default_config_path=Path('config.cfg')
+        NAME,
+        config=config,
+        default_command=prompt,
+        default_config_path=Path('config.cfg'),
     )
 
     cli(prog_name=NAME)

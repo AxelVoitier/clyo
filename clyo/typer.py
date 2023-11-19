@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from types import ModuleType
-    from typing import Any, Callable, Protocol, Union
+    from typing import Any, Callable, Protocol
 
     from click import Context, HelpFormatter
     from rich.console import Console, RenderableType
@@ -42,8 +42,9 @@ from typer.core import TyperGroup
 # Local imports
 
 if TYPE_CHECKING:
+
     class ConfigProtocol(Protocol):
-        def read(self, _path: Path) -> Any:
+        def read(self, _path: Path) -> Any:  # noqa: ANN401
             ...
 
 # While Typer and Rich are great out-of-the-box, as soon as you need a customisation not already
@@ -54,24 +55,24 @@ _options_panels: list[tuple[tuple[Any, ...], dict[str, Any]]] | None = None
 _commands_panels: list[tuple[tuple[Any, ...], dict[str, Any]]] | None = None
 
 
-def _print_options_panel(*args: Any, **kwargs: Any) -> Any:
+def _print_options_panel(*args: Any, **kwargs: Any) -> None:
     if _options_panels is not None:  # Save the call for later
         _options_panels.append((args, kwargs))
     else:
-        return typer.rich_utils._orig_print_options_panel(*args, **kwargs)  # type: ignore
+        typer.rich_utils._orig_print_options_panel(*args, **kwargs)  # type: ignore  # noqa: PGH003
 
 
-def _print_commands_panel(*args: Any, **kwargs: Any) -> Any:
+def _print_commands_panel(*args: Any, **kwargs: Any) -> None:
     if _commands_panels is not None:  # Save the call for later
         _commands_panels.append((args, kwargs))
     else:
-        return typer.rich_utils._orig_print_commands_panel(*args, **kwargs)  # type: ignore
+        typer.rich_utils._orig_print_commands_panel(*args, **kwargs)  # type: ignore  # noqa: PGH003
 
 
-typer.rich_utils._orig_print_options_panel = typer.rich_utils._print_options_panel  # type: ignore
+typer.rich_utils._orig_print_options_panel = typer.rich_utils._print_options_panel  # type: ignore  # noqa: PGH003
 typer.rich_utils._print_options_panel = _print_options_panel  # pyright: ignore[reportPrivateUsage]
-typer.rich_utils._orig_print_commands_panel = typer.rich_utils._print_commands_panel  # type: ignore
-typer.rich_utils._print_commands_panel = _print_commands_panel  # pyright: ignore[reportPrivateUsage]  # noqa: E501
+typer.rich_utils._orig_print_commands_panel = typer.rich_utils._print_commands_panel  # type: ignore  # noqa: PGH003
+typer.rich_utils._print_commands_panel = _print_commands_panel  # pyright: ignore[reportPrivateUsage]
 
 
 def _print_commands_panel_with_tree(
@@ -82,18 +83,18 @@ def _print_commands_panel_with_tree(
     console: Console,
     ctx: Context,
 ) -> None:
-    '''Reimplements to (recursively) show subcommands of given commands, in a tree form'''
+    """Reimplements to (recursively) show subcommands of given commands, in a tree form"""
 
     t_styles: dict[str, Any] = {
-        "show_lines": typer.rich_utils.STYLE_COMMANDS_TABLE_SHOW_LINES,
-        "leading": typer.rich_utils.STYLE_COMMANDS_TABLE_LEADING,
-        "box": typer.rich_utils.STYLE_COMMANDS_TABLE_BOX,
-        "border_style": typer.rich_utils.STYLE_COMMANDS_TABLE_BORDER_STYLE,
-        "row_styles": typer.rich_utils.STYLE_COMMANDS_TABLE_ROW_STYLES,
-        "pad_edge": typer.rich_utils.STYLE_COMMANDS_TABLE_PAD_EDGE,
-        "padding": typer.rich_utils.STYLE_COMMANDS_TABLE_PADDING,
+        'show_lines': typer.rich_utils.STYLE_COMMANDS_TABLE_SHOW_LINES,
+        'leading': typer.rich_utils.STYLE_COMMANDS_TABLE_LEADING,
+        'box': typer.rich_utils.STYLE_COMMANDS_TABLE_BOX,
+        'border_style': typer.rich_utils.STYLE_COMMANDS_TABLE_BORDER_STYLE,
+        'row_styles': typer.rich_utils.STYLE_COMMANDS_TABLE_ROW_STYLES,
+        'pad_edge': typer.rich_utils.STYLE_COMMANDS_TABLE_PAD_EDGE,
+        'padding': typer.rich_utils.STYLE_COMMANDS_TABLE_PADDING,
     }
-    box_style = getattr(rich.box, t_styles.pop("box"), None)
+    box_style = getattr(rich.box, t_styles.pop('box'), None)
 
     commands_tree = Tree('root', hide_root=True, style='bold cyan')
     commands_table = Table(
@@ -110,18 +111,22 @@ def _print_commands_panel_with_tree(
     deprecated_rows: list[RenderableType | None] = []
 
     def make_row_info(command: click.Command) -> tuple[Text, Text | Markdown, Text | None]:
-        command_name = command.name or ""
+        command_name = command.name or ''
 
         help_text = typer.rich_utils._make_command_help(  # pyright: ignore[reportPrivateUsage]
-            help_text=command.short_help or command.help or "",
+            help_text=command.short_help or command.help or '',
             markup_mode=markup_mode,
         )
 
         if command.deprecated:
             command_name_text = Text(
-                f"{command_name}", style=typer.rich_utils.STYLE_DEPRECATED_COMMAND)
-            deprecated_text = Text(typer.rich_utils.DEPRECATED_STRING,
-                                   style=typer.rich_utils.STYLE_DEPRECATED)
+                f'{command_name}',
+                style=typer.rich_utils.STYLE_DEPRECATED_COMMAND,
+            )
+            deprecated_text = Text(
+                typer.rich_utils.DEPRECATED_STRING,
+                style=typer.rich_utils.STYLE_DEPRECATED,
+            )
         else:
             command_name_text = Text(command_name)
             deprecated_text = None
@@ -163,10 +168,10 @@ def _print_commands_panel_with_tree(
         console.print(commands_tree)
     commands_rows = [Text.from_ansi(command) for command in capture.get().splitlines()]
 
-    it: zip[Union[
-        tuple[Text, RenderableType | None],
-        tuple[Text, RenderableType | None, RenderableType | None]
-    ]]
+    it: zip[
+        tuple[Text, RenderableType | None]
+        | tuple[Text, RenderableType | None, RenderableType | None]
+    ]
     if any(deprecated_rows):
         it = zip(commands_rows, help_rows, deprecated_rows)
     else:
@@ -180,12 +185,11 @@ def _print_commands_panel_with_tree(
                 border_style=typer.rich_utils.STYLE_COMMANDS_PANEL_BORDER,
                 title=name,
                 title_align=typer.rich_utils.ALIGN_COMMANDS_PANEL,
-            )
+            ),
         )
 
 
 class CommandsFormatterMixin(click.Command):  # Can be used on any click.Command subclass
-
     def format_help(self, ctx: Context, formatter: HelpFormatter) -> None:
         global _options_panels, _commands_panels
         _options_panels = []
@@ -208,7 +212,7 @@ class CommandsFormatterMixin(click.Command):  # Can be used on any click.Command
                 _print_commands_panel_with_tree(*args, ctx=ctx, **kwargs)
 
             for args, kwargs in _options_panels:
-                typer.rich_utils._orig_print_options_panel(*args, **kwargs)  # type: ignore
+                typer.rich_utils._orig_print_options_panel(*args, **kwargs)  # type: ignore  # noqa: PGH003
 
         finally:
             _options_panels = None
@@ -216,24 +220,23 @@ class CommandsFormatterMixin(click.Command):  # Can be used on any click.Command
 
 
 class ClyoTyperGroup(CommandsFormatterMixin, TyperGroup):
-
     def get_help_option(self, ctx: Context) -> click.Option | None:
-        '''Part one of assigning a rich panel to default options related to the CLI itself'''
+        """Part one of assigning a rich panel to default options related to the CLI itself"""
 
         opt = super().get_help_option(ctx)
         if opt:
-            opt.rich_help_panel = 'CLI'  # type: ignore
+            opt.rich_help_panel = 'CLI'  # type: ignore  # noqa: PGH003
         return opt
 
 
 class ClyoTyper(typer.Typer):
-
     def __init__(
-        self, *args: Any,
+        self,
+        *args: Any,
         help: str = 'CLI for ...',
         rich_markup_mode: MarkupMode = 'markdown',
         cls: type[TyperGroup] = ClyoTyperGroup,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         parent = kwargs.pop('parent', None)
         super().__init__(
@@ -241,38 +244,38 @@ class ClyoTyper(typer.Typer):
             help=help,
             rich_markup_mode=rich_markup_mode,
             cls=cls,
-            **kwargs
+            **kwargs,
         )
 
         if parent:
             parent.add_typer(self)
 
     def add_typer(self, *args: Any, **kwargs: Any) -> None:
-        '''Reimplements to inject cls argument on sub-groups'''
+        """Reimplements to inject cls argument on sub-groups"""
         if 'cls' not in kwargs:
             kwargs['cls'] = ClyoTyperGroup
 
         return super().add_typer(*args, **kwargs)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        '''
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+        """
         Reimplements for part two of assigning a rich panel to default options
         related to the CLI itself
-        '''
+        """
         if sys.excepthook != typer.main.except_hook:
             sys.excepthook = typer.main.except_hook  # type: ignore[assignment]
 
         cmd = typer.main.get_command(self)
         for param in cmd.params:
             if param.name in ('install_completion', 'show_completion'):
-                param.rich_help_panel = 'CLI'  # type: ignore
+                param.rich_help_panel = 'CLI'  # type: ignore  # noqa: PGH003
 
         try:
             return cmd(*args, **kwargs)
         except Exception as e:
             setattr(
                 e,
-                typer.main._typer_developer_exception_attr_name,  # pyright: ignore[reportPrivateUsage]  # noqa: E501
+                typer.main._typer_developer_exception_attr_name,  # pyright: ignore[reportPrivateUsage]
                 typer.models.DeveloperExceptionConfig(
                     pretty_exceptions_enable=self.pretty_exceptions_enable,
                     pretty_exceptions_show_locals=self.pretty_exceptions_show_locals,
@@ -299,11 +302,11 @@ class ClyoTyper(typer.Typer):
                 print_err_logger.propagate = False
                 print_err_logger.exception('Oups')
 
-            raise e
+            raise
 
     def set_main_callback(
         self,
-        NAME: str,
+        name: str,
         *,
         config: ConfigProtocol | None = None,
         default_config_path: Path | None = None,
@@ -313,30 +316,47 @@ class ClyoTyper(typer.Typer):
         tracebacks_suppress: Iterable[str | ModuleType] | None = None,
     ) -> None:
         if default_config_path is None:
-            default_config_path = Path(typer.get_app_dir(NAME)) / 'config.cfg'
+            default_config_path = Path(typer.get_app_dir(name)) / 'config.cfg'
 
-        if tracebacks_suppress is None:
-            tracebacks_suppress = []
-        else:
-            tracebacks_suppress = list(tracebacks_suppress)
+        tracebacks_suppress = [] if tracebacks_suppress is None else list(tracebacks_suppress)
         tracebacks_suppress.append('typer')
         tracebacks_suppress.append('click')
 
         self.pretty_exceptions_enable = rich_tracebacks
         self.pretty_exceptions_show_locals = tracebacks_show_locals
 
+        config_envvar = f'{name.upper().replace(" ", "_").replace("-", "_")}_CONFIG'
+
         @self.callback(invoke_without_command=(default_command is not None))
         def cli_base(  # pyright: ignore[reportUnusedFunction]
             ctx: typer.Context,
-            config_file: Optional[Path] = Option(
-                default_config_path, '--config', '-c', help='Config file',
-                file_okay=True, envvar=f'{NAME.upper().replace(" ", "_").replace("-", "_")}_CONFIG',
-                rich_help_panel='CLI'
+            config_file: Optional[Path] = Option(  # noqa: UP007, B008
+                default_config_path,
+                '--config',
+                '-c',
+                help='Config file',
+                file_okay=True,
+                envvar=config_envvar,
+                rich_help_panel='CLI',
             ),
-            verbose: int = Option(0, '--verbose', '-v', count=True, show_default=False,
-                                  help='Increase logging output', rich_help_panel='Logging'),
-            quiet: int = Option(0, '--quiet', '-q', count=True, show_default=False,
-                                help='Decrease logging output', rich_help_panel='Logging'),
+            verbose: int = Option(
+                0,
+                '--verbose',
+                '-v',
+                count=True,
+                show_default=False,
+                help='Increase logging output',
+                rich_help_panel='Logging',
+            ),
+            quiet: int = Option(
+                0,
+                '--quiet',
+                '-q',
+                count=True,
+                show_default=False,
+                help='Decrease logging output',
+                rich_help_panel='Logging',
+            ),
             log_lvl: str = Option('INFO', help='Log level', rich_help_panel='Logging'),
         ) -> None:
             # Config file
@@ -346,10 +366,15 @@ class ClyoTyper(typer.Typer):
             # Configure logging
             root_logger = logging.getLogger()
             # Compute target log level from given log_level + number of quiet - number of verbose
-            levels = sorted(set(
-                logging._nameToLevel.values()))  # pyright: ignore[reportPrivateUsage]
-            root_logger.setLevel(levels[min(max(levels.index(
-                logging.getLevelName(log_lvl)) + quiet - verbose, 0), len(levels) - 1)])
+            levels = sorted(set(logging._nameToLevel.values()))  # pyright: ignore[reportPrivateUsage]
+            root_logger.setLevel(
+                levels[
+                    min(
+                        max(levels.index(logging.getLevelName(log_lvl)) + quiet - verbose, 0),
+                        len(levels) - 1,
+                    )
+                ],
+            )
 
             # Make console logging attractive
             console_handler = RichHandler(

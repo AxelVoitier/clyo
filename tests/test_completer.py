@@ -7,7 +7,7 @@
 # spell-checker:enableCompoundWords
 # spell-checker:words
 # spell-checker:ignore fuzzies unformat
-''''''
+# ruff: noqa: N816, COM812
 from __future__ import annotations
 
 # System imports
@@ -20,13 +20,15 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from typing import TypeAlias
 
+    from prompt_toolkit.formatted_text import StyleAndTextTuples
+
 # Third-party imports
 import pytest
+
 # Local imports
 import typer
 from prompt_toolkit.completion import CompleteEvent, Completion
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import StyleAndTextTuples
 from rich import print
 
 from clyo import ClyoTyper, CommandTree
@@ -62,7 +64,7 @@ def print_completion(completion: Completion) -> None:
     print(
         f"{type(completion).__name__}(text='{completion.text}', display='{completion.display}', "
         f"display_text='{completion.display_text}', start_position={completion.start_position}, "
-        f"display_meta='{unformat(completion.display_meta)}')"
+        f"display_meta='{unformat(completion.display_meta)}')",
     )
 
 
@@ -71,7 +73,8 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.parametrize(
-    'path, text, fix_path, fix_len, fix_args', [
+    ('path', 'text', 'fix_path', 'fix_len', 'fix_args'),
+    [
         # Root itself
         ('/', '', '/', 0, ''),
         ('/', '/', '/', 1, ''),
@@ -82,7 +85,6 @@ if TYPE_CHECKING:
         pytest.param('/', '/r', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)),
         ('/', '/////////////////', '/', 17, ''),
         ('/', '   /////////////////', '/', 20, ''),
-
         # Root level
         ('/', 'root1', '/root1', 5, ''),
         ('/', '/root1', '/root1', 6, ''),
@@ -123,7 +125,6 @@ if TYPE_CHECKING:
         ('/', '/root1/// ///arg1', '/root1', 10, '///arg1'),
         ('/', 'root1 arg1 arg2', '/root1', 6, 'arg1 arg2'),
         ('/', '/root1 arg1 arg2', '/root1', 7, 'arg1 arg2'),
-
         # One level
         ('/', 'level1A', '/level1A', 7, ''),
         ('/', '/level1A', '/level1A', 8, ''),
@@ -165,14 +166,18 @@ if TYPE_CHECKING:
         ('/', 'level1A/command1 arg', '/level1A/command1', 17, 'arg'),
         ('/', '/level1A/command1 arg', '/level1A/command1', 18, 'arg'),
         ('/', 'level1A   command1   arg', '/level1A/command1', 21, 'arg'),
-        pytest.param('/', 'level1A command1/arg', '', 0, '',
-                     marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', '/level1A/command1/arg', '', 0, '',
-                     marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', 'level1A command1////arg', '', 0, '',
-                     marks=pytest.mark.xfail(raises=KeyError)),
-        pytest.param('/', '/level1A/command1////arg', '', 0, '',
-                     marks=pytest.mark.xfail(raises=KeyError)),
+        pytest.param(
+            '/', 'level1A command1/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)
+        ),
+        pytest.param(
+            '/', '/level1A/command1/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)
+        ),
+        pytest.param(
+            '/', 'level1A command1////arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)
+        ),
+        pytest.param(
+            '/', '/level1A/command1////arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)
+        ),
         ('/', 'level1A command1 /arg', '/level1A/command1', 17, '/arg'),
         ('/', '/level1A/command1 /arg', '/level1A/command1', 18, '/arg'),
         ('/', 'level1A command1/ /arg', '/level1A/command1', 18, '/arg'),
@@ -180,7 +185,6 @@ if TYPE_CHECKING:
         ('/', 'level1A command1/// ///arg', '/level1A/command1', 20, '///arg'),
         ('/', '/level1A/command1/// ///arg', '/level1A/command1', 21, '///arg'),
         ('/', '/level1A/command1///   ///arg', '/level1A/command1', 23, '///arg'),
-
         # Two levels
         ('/', 'level1A level2B', '/level1A/level2B', 15, ''),
         ('/', '/level1A level2B', '/level1A/level2B', 16, ''),
@@ -222,11 +226,16 @@ if TYPE_CHECKING:
         ('/', '////level1A////level2B////command6//', '/level1A/level2B/command6', 36, ''),
         ('/', ' // //level1A/ / / /level2B/  ///command6//  ', '/level1A/level2B/command6', 43, ''),
         ('/', 'level1A level2B command6/// ///', '/level1A/level2B/command6', 28, '///'),
-        ('/', 'level1A level2B command6 --arg1 --a-rg2=ah',
-         '/level1A/level2B/command6', 25, '--arg1 --a-rg2=ah'),
-        pytest.param('/', 'level1A level2B command6/arg', '', 0, '',
-                     marks=pytest.mark.xfail(raises=KeyError)),
-
+        (
+            '/',
+            'level1A level2B command6 --arg1 --a-rg2=ah',
+            '/level1A/level2B/command6',
+            25,
+            '--arg1 --a-rg2=ah',
+        ),
+        pytest.param(
+            '/', 'level1A level2B command6/arg', '', 0, '', marks=pytest.mark.xfail(raises=KeyError)
+        ),
         # Navigating hierarchy
         ('/level1A', '', '/level1A', 0, ''),
         ('/level1A', 'command1', '/level1A/command1', 8, ''),
@@ -249,13 +258,11 @@ if TYPE_CHECKING:
         ('/level1A', '/root1', '/root1', 6, ''),
         ('/level1A/level2A', '../level2B', '/level1A/level2B', 10, ''),
         ('/level1A/level2A', '../../root1', '/root1', 11, ''),
-
         # Comments
         ('/', '# root1', '/', 0, ''),
         ('/', '   # root1', '/', 0, ''),
         ('/', 'level1A#/command1', '/level1A', 7, ''),
         ('/', 'level1A/#command1', '/level1A', 8, ''),
-
         # Help prefixes
         ('/', 'help', '/', 4, '--help'),
         ('/', 'help root1', '/root1', 10, '--help'),
@@ -265,8 +272,7 @@ if TYPE_CHECKING:
         ('/', 'help root1 arg', '/root1', 11, '--help'),
         ('/', '?', '/', 1, '--help'),
         ('/', '? root1', '/root1', 7, '--help'),
-
-    ]
+    ],
 )
 def test_get_command(
     command_tree: CommandTree,
@@ -278,7 +284,7 @@ def test_get_command(
 ) -> None:
     command_tree.path = path  # type: ignore[assignment]
 
-    command, args, command_len = command_tree.get_command(text, True)
+    command, args, command_len = command_tree.get_command(text, prefix_enabled=True)
     print(f'{command.name=}, {command.path=!s}, {command_len=}, {args=}')
 
     assert command.path == Path(fix_path)
@@ -345,7 +351,8 @@ command1_params: list[CompletionFixture] = [
 
 
 @pytest.mark.parametrize(
-    'fuzzy, path, text, fixtures', [
+    ('fuzzy', 'path', 'text', 'fixtures'),
+    [
         (None, '/', '', root_level),
         (None, '/', '/', root_level),
         (None, '/', 'r', root_level[:3]),
@@ -422,7 +429,6 @@ command1_params: list[CompletionFixture] = [
         (True, '/', 'root3 --flag1 o', root3_params[:2] + root3_params[3:]),
         (False, '/', '/root3 --flag1 o', root3_params[:2]),
         (True, '/', '/root3 --flag1 o', root3_params[:2] + root3_params[3:]),
-
         (None, '/', 'le', [completion_fixtures['level1A']]),
         (None, '/', '/le', [completion_fixtures['level1A']]),
         (False, '/', 'lel', []),
@@ -501,26 +507,22 @@ command1_params: list[CompletionFixture] = [
         (True, '/', 'level1A command1 other1 other2 other3 other4 ', []),
         (False, '/', '/level1A command1 other1 other2 other3 other4 ', []),
         (True, '/', '/level1A command1 other1 other2 other3 other4 ', []),
-
         (None, '/', 'help', []),
         (None, '/', 'help ', root_level),
         (None, '/', 'help /', root_level),
         # (None, '/', 'help/', []),
-    ]
+    ],
 )
 def test_completion(
     command_tree: CommandTree,
     fuzzy: bool | None,
     path: str,
     text: str,
-    fixtures: list[CompletionFixture]
+    fixtures: list[CompletionFixture],
 ) -> None:
     command_tree.path = path  # type: ignore[assignment]
     fuzzies: Iterable[bool]
-    if fuzzy is None:
-        fuzzies = (False, True)
-    else:
-        fuzzies = (fuzzy, )
+    fuzzies = (False, True) if fuzzy is None else (fuzzy,)
 
     for fuzzy in fuzzies:
         print(f'Doing {fuzzy=} of {fuzzies=}')
@@ -530,7 +532,8 @@ def test_completion(
         doc = Document(text, len(text))
         event = CompleteEvent(text_inserted=True)
         results = list(completer.get_completions(doc, event))
-        # print(f'{results=}')
+        print(f'{results=}')
+
         for fix_text, fix_meta in fixtures:
             completion = results.pop(0)
             print_completion(completion)

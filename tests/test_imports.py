@@ -8,9 +8,14 @@
 from __future__ import annotations
 
 # System imports
+import contextlib
 import importlib
 import os
-from collections.abc import Container, Generator
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Container, Generator
 
 # Third-party imports
 import pytest
@@ -20,12 +25,12 @@ import pytest
 
 def list_packages_in_folder(
     root_package_folder: str,
-    ignores: Container[str] | None = None
+    ignores: Container[str] | None = None,
 ) -> Generator[str, None, None]:
     if ignores is None:
         ignores = []
 
-    basefolder = os.path.dirname(root_package_folder) + '/'
+    basefolder = str(Path(root_package_folder).parent) + '/'
 
     def convert_folder_to_package(foldername: str) -> str:
         return foldername.replace(basefolder, '').replace('/', '.')
@@ -54,22 +59,20 @@ def list_packages_in_folder(
             if module_name not in ignores:
                 yield module_name
 
-        try:
+        with contextlib.suppress(ValueError):
             dirnames.remove('__pycache__')
-        except ValueError:
-            pass
 
 
 def relative_path(base_filepath: str, *subpaths: str) -> str:
-    return os.path.abspath(os.path.join(os.path.dirname(base_filepath), *subpaths))
+    return str(Path(base_filepath).parent.joinpath(*subpaths).resolve())
 
 
 @pytest.mark.parametrize(
-    'module_name', list_packages_in_folder(
+    'module_name',
+    list_packages_in_folder(
         relative_path(__file__, '..', 'clyo'),
-        ignores=[
-        ]
-    )
+        ignores=[],
+    ),
 )
 def test_imports(module_name: str) -> None:
     assert importlib.import_module(module_name)

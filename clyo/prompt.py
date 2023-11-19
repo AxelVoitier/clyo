@@ -33,8 +33,13 @@ import typer.core
 from click.parser import split_opt
 from prompt_toolkit import ANSI, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import (Completer, Completion, FuzzyCompleter,
-                                       NestedCompleter, WordCompleter)
+from prompt_toolkit.completion import (
+    Completer,
+    Completion,
+    FuzzyCompleter,
+    NestedCompleter,
+    WordCompleter,
+)
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.output import ColorDepth
@@ -56,10 +61,10 @@ def print_in_terminal(*args: Any, **kwargs: Any) -> None:
     from prompt_toolkit.application import run_in_terminal
 
     def _() -> None:
-        print(*args, **kwargs)
+        print(*args, **kwargs)  # noqa: T201
 
     run_in_terminal(_)
-    print(*args, **kwargs)
+    print(*args, **kwargs)  # noqa: T201
 
 
 def rich_to_ptk(*renderables: RenderableType) -> ANSI:
@@ -74,11 +79,10 @@ def rich_to_ptk(*renderables: RenderableType) -> ANSI:
 
 
 class TreeCompleter(Completer):
-
     def __init__(
         self,
         command_tree: CommandTree,
-        current_completer: Completer | None = None
+        current_completer: Completer | None = None,
     ) -> None:
         self._tree = command_tree
         self._current_completer = current_completer or self._tree.root_command.completer
@@ -94,7 +98,7 @@ class TreeCompleter(Completer):
     def get_completions(
         self,
         document: Document,
-        complete_event: CompleteEvent
+        complete_event: CompleteEvent,
     ) -> Iterator[Completion]:
         # print_in_terminal(
         #     f'\n---------\nNew completion: |{document.text}|, |{document.text_before_cursor}|, '
@@ -105,30 +109,26 @@ class TreeCompleter(Completer):
 
         command, _, command_len = self._tree.get_command(document.text, partial=True)
         new_pos = document.cursor_position - command_len
-        print_in_terminal(f'\nCommand is: {command.path}, len={command_len}, {new_pos=}', )
+        # print_in_terminal(f'\nCommand is: {command.path}, len={command_len}, {new_pos=}')
         if command_len and not new_pos and (document.text[document.cursor_position - 1] != '/'):
             return
 
-        document = Document(
-            document.text[command_len:],
-            cursor_position=new_pos
-        )
+        document = Document(document.text[command_len:], cursor_position=new_pos)
         yield from command.completer.get_completions(document, complete_event)
 
 
 class AutoTreeCompleter(TreeCompleter):
-
     @property
     def current_completer(self) -> Completer:
         return self._tree.current_command.completer
 
     @current_completer.setter
     def current_completer(self, completer: Completer) -> None:
-        raise ValueError('Cannot set a current completer on an AutoTreeCompleter')
+        msg = 'Cannot set a current completer on an AutoTreeCompleter'
+        raise ValueError(msg)
 
 
 class CommandCompleter(WordCompleter):
-
     def __init__(
         self,
         options_with_extra: Mapping[str, NestedCompleterWithExtra.Option],
@@ -143,7 +143,7 @@ class CommandCompleter(WordCompleter):
         options: dict[str, Completer | None] = {}
         self._path = path
 
-        for name, (option, display, meta, opt_kwargs, is_group) in options_with_extra.items():
+        for name, (option, display, meta, opt_kwargs, _) in options_with_extra.items():
             # if is_group:
             #     name += '/'
             # else:
@@ -162,41 +162,40 @@ class CommandCompleter(WordCompleter):
                 if arg_kwargs.get('hidden', False):
                     continue
 
-                self._arguments.append(Completion(
-                    text=text,
-                    start_position=0,
-                    display=display,
-                    display_meta=meta,
-                ))
+                self._arguments.append(
+                    Completion(
+                        text=text,
+                        start_position=0,
+                        display=display,
+                        display_meta=meta,
+                    ),
+                )
 
         super().__init__(  # type: ignore[misc]
             *args,
             words=list(options.keys()),
             display_dict=self._display_dict,
             meta_dict=self._meta_dict,
-            **kwargs
+            **kwargs,
         )
 
     def get_completions(
         self,
         document: Document,
-        complete_event: CompleteEvent
+        complete_event: CompleteEvent,
     ) -> Iterator[Completion]:
         text = document.text_before_cursor.lstrip()
-        print_in_terminal(f'\nFor path {self._path}: |{document.text=}| ; |{text=}|')
+        # print_in_terminal(f'\nFor path {self._path}: |{document.text=}| ; |{text=}|')
 
         yield from super().get_completions(document, complete_event)
 
         # if not document.text:
         nargs = len([term for term in text.split() if '=' not in term])
-        print_in_terminal(f'\n{nargs=}')
-        for arg in self._arguments[nargs:]:
-            print_in_terminal('yielding arg', arg)
-            yield arg
+        # print_in_terminal(f'\n{nargs=}')
+        yield from self._arguments[nargs:]
 
 
 class NestedCompleterWithExtra(NestedCompleter):
-
     if TYPE_CHECKING:
         Option: TypeAlias = tuple[
             Completer | None,  # Option
@@ -209,7 +208,7 @@ class NestedCompleterWithExtra(NestedCompleter):
             str,  # Text
             AnyFormattedText,  # Display
             AnyFormattedText,  # Meta
-            dict[str, Any]  # Option kwargs
+            dict[str, Any],  # Option kwargs
         ]
 
     def __init__(
@@ -238,19 +237,21 @@ class NestedCompleterWithExtra(NestedCompleter):
                 if arg_kwargs.get('hidden', False):
                     continue
 
-                self._arguments.append(Completion(
-                    text=text,
-                    start_position=0,
-                    display=display,
-                    display_meta=meta,
-                ))
+                self._arguments.append(
+                    Completion(
+                        text=text,
+                        start_position=0,
+                        display=display,
+                        display_meta=meta,
+                    ),
+                )
 
         super().__init__(options, *args, **kwargs)
 
     def get_completions(
         self,
         document: Document,
-        complete_event: CompleteEvent
+        complete_event: CompleteEvent,
     ) -> Iterator[Completion]:
         text = document.text_before_cursor.lstrip()
         stripped_len = len(document.text_before_cursor) - len(text)
@@ -263,7 +264,7 @@ class NestedCompleterWithExtra(NestedCompleter):
 
             # If we have a sub completer, use this for the completions.
             if completer is not None:
-                remaining_text = text[len(terms[0]):].lstrip()
+                remaining_text = text[len(terms[0]) :].lstrip()
                 move_cursor = len(text) - len(remaining_text) + stripped_len
 
                 new_document = Document(
@@ -313,9 +314,7 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         if not new_document.text:
             nargs = len([term for term in text.split() if '=' not in term])
-            for arg in self._arguments[nargs:]:
-                # print_in_terminal('yielding arg', arg)
-                yield arg
+            yield from self._arguments[nargs:]
 
 
 @dataclass
@@ -343,7 +342,7 @@ class Node:
     def make_recursive(
         cls,
         command: Command,
-        parent: Node | None = None
+        parent: Node | None = None,
     ) -> Iterator[tuple[str, Self]]:
         if isinstance(command, click.Group):
             for subcommand in command.commands.values():
@@ -355,9 +354,10 @@ class Node:
 
                 yield node.name, node
         else:
-            raise NotImplementedError('Don\'t know what to do with a command that is not a group?!')
+            msg = "Don't know what to do with a command that is not a group?!"
+            raise NotImplementedError(msg)
 
-    def exec(self, args: str | None = None) -> None:
+    def exec(self, args: str | None = None) -> None:  # noqa: A003
         try:
             self.command(
                 self.make_args(args) if args else [],
@@ -370,7 +370,7 @@ class Node:
             ex.show()
         except click.Abort:
             rprint('[red]Aborted![/]', file=sys.stderr)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             rprint('[red]Exception:[/]', ex, file=sys.stderr)
 
     @property
@@ -412,10 +412,12 @@ class Node:
             completion_dict[node.name] = (
                 node.completer,
                 None,
-                rich_to_ptk(rich_utils._make_rich_rext(
-                    text=(node.command.help or ' ').splitlines()[0].strip(),
-                    markup_mode=getattr(node.command, 'rich_markup_mode', None),
-                )),
+                rich_to_ptk(
+                    rich_utils._make_rich_rext(
+                        text=(node.command.help or ' ').splitlines()[0].strip(),
+                        markup_mode=getattr(node.command, 'rich_markup_mode', None),
+                    ),
+                ),
                 dict(hidden=node.command.hidden),
                 bool(node.children),
             )
@@ -423,7 +425,7 @@ class Node:
         # self.completer = NestedCompleterWithExtra(dict(completion_dict))
         self.completer = CommandCompleter(dict(completion_dict), path=str(self.path))
 
-    def _make_command_completer(self) -> None:  # noqa: C901
+    def _make_command_completer(self) -> None:  # noqa: C901, PLR0912, PLR0915
         completion_dict: dict[str, NestedCompleterWithExtra.Option] = {}
         argument_list: list[NestedCompleterWithExtra.Argument] = []
         markup_mode: rich_utils.MarkupMode = getattr(self.command, 'rich_markup_mode', None)
@@ -462,41 +464,37 @@ class Node:
             # Default
             default_text = Text(style='magenta dim')
             default_str = ''
-            if isinstance(param, (typer.core.TyperOption, typer.core.TyperArgument)):
-                if param.show_default:
-                    ctx = click.get_current_context()
-                    show_default_is_str = isinstance(param.show_default, str)
-                    default_value = param._extract_default_help_str(ctx=ctx)
-                    default_str = param._get_default_string(
-                        ctx=ctx,
-                        show_default_is_str=show_default_is_str,
-                        default_value=default_value,
-                    )
+            if (
+                isinstance(param, (typer.core.TyperOption, typer.core.TyperArgument))
+                and param.show_default
+            ):
+                ctx = click.get_current_context()
+                show_default_is_str = isinstance(param.show_default, str)
+                default_value = param._extract_default_help_str(ctx=ctx)
+                default_str = param._get_default_string(
+                    ctx=ctx,
+                    show_default_is_str=show_default_is_str,
+                    default_value=default_value,
+                )
             if default_str:
                 default_text.append(f'({default_str}) ')
 
             # Help text
             if isinstance(param, (click.Option, typer.core.TyperArgument)):
-                help = param.help or ' '
+                help_str = param.help or ' '
             else:
-                help = ' '
-            help_str = help.splitlines()[0].strip()
+                help_str = ' '
+            help_str = help_str.splitlines()[0].strip()
             help_text = rich_utils._make_rich_rext(text=help_str, markup_mode=markup_mode)
 
             meta_str = rich_to_ptk(metavar_text, default_text, help_text)
 
             if isinstance(param, click.Option):
-                if param.is_bool_flag and param.default:
-                    # The flag is on by default. Use secondary opts
-                    opts = param.secondary_opts
-                else:
-                    opts = param.opts
+                # The flag is on by default. Use secondary opts
+                opts = param.secondary_opts if param.is_bool_flag and param.default else param.opts
 
                 for opt in opts:
-                    if param.is_flag:
-                        opt_name = opt
-                    else:
-                        opt_name = f'{split_opt(opt)[1]}='
+                    opt_name = opt if param.is_flag else f'{split_opt(opt)[1]}='
 
                     display: str | FormattedText | None = None
                     if param.required:
@@ -521,20 +519,24 @@ class Node:
                 else:
                     hidden = False
 
-                argument_list.append((
-                    param.human_readable_name,
-                    display,
-                    meta_str,
-                    dict(hidden=hidden),
-                ))
+                argument_list.append(
+                    (
+                        param.human_readable_name,
+                        display,
+                        meta_str,
+                        dict(hidden=hidden),
+                    ),
+                )
 
         # self.completer = NestedCompleterWithExtra(completion_dict, arguments=argument_list)
         self.completer = CommandCompleter(
-            completion_dict, arguments=argument_list, path=str(self.path))
+            completion_dict,
+            arguments=argument_list,
+            path=str(self.path),
+        )
 
 
 class CommandTree:
-
     if TYPE_CHECKING:
         Prefix: TypeAlias = Callable[[str, int, bool], tuple[Node, str, int]]
 
@@ -566,9 +568,11 @@ class CommandTree:
         command, args = self[str(path)]
 
         if args:
-            raise ValueError(f'Cannot set a path that contains arguments: {args}')
+            msg = f'Cannot set a path that contains arguments: {args}'
+            raise ValueError(msg)
         if not command.children:
-            raise ValueError(f'Cannot set a path that is a leaf command: {command.path}')
+            msg = f'Cannot set a path that is a leaf command: {command.path}'
+            raise ValueError(msg)
 
         self.goto(command)
 
@@ -585,7 +589,7 @@ class CommandTree:
 
     @property
     def at_root(self) -> bool:
-        return (self.path == self.ROOT_PATH)
+        return self.path == self.ROOT_PATH
 
     @property
     def completer(self) -> Completer:
@@ -611,11 +615,14 @@ class CommandTree:
     def add_prefix(self, name: str, callback: CommandTree.Prefix) -> None:
         self._prefixes[name] = callback
 
-    def _help_prefix(self, prompt: str, command_len: int, partial: bool) -> tuple[Node, str, int]:
+    def _help_prefix(self, prompt: str, command_len: int, partial: bool) -> tuple[Node, str, int]:  # noqa: FBT001
         remain = prompt[command_len:]
         if remain.strip():
             command, _, new_command_len = self.get_command(
-                remain, prefix_enabled=False, partial=partial)
+                remain,
+                prefix_enabled=False,
+                partial=partial,
+            )
         else:
             command = self._pointer
             new_command_len = 0
@@ -625,13 +632,14 @@ class CommandTree:
     def __getitem__(self, name: str) -> tuple[Node, str]:
         return self.get_command(name, prefix_enabled=True)[:2]
 
-    def get_command(  # noqa: C901
+    def get_command(  # noqa: C901, PLR0912
         self,
         prompt: str,
+        *,
         prefix_enabled: bool = True,
         partial: bool = False,
     ) -> tuple[Node, str, int]:
-        '''Parse a user prompt input into a command and its args.
+        """Parse a user prompt input into a command and its args.
 
         Supports hierarchy navigation UNIX-like. But also supports to replace
         the "/" with " ".
@@ -660,10 +668,10 @@ class CommandTree:
                 - Second: The arguments to the command (or, when using partial, the unresolved part)
                 - Third: The length of the command (including the separating space(s) if there are
                   args, but not including it(them) if there are no args)
-        '''
+        """
         # Handle comments
         if '#' in prompt:
-            prompt = prompt[:prompt.index('#')]
+            prompt = prompt[: prompt.index('#')]
 
         # We need to keep a reference to the original string.
         original = prompt
@@ -771,13 +779,13 @@ class CommandTree:
         return [
             ('#00aa00', '['),
             ('ansibrightcyan', str(self.path)),
-            ('#00aa00', '] ')
+            ('#00aa00', '] '),
         ]
 
     def repl(self, session: PromptSession[str], **prompt_kwargs: Any) -> None:
         self.current_prompt = session
         try:
-            input = session.prompt(**prompt_kwargs)
+            input = session.prompt(**prompt_kwargs)  # noqa: A001
         finally:
             self.current_prompt = None
 

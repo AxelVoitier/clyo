@@ -262,7 +262,7 @@ class ClyoTyper(typer.Typer):
         return super().add_typer(*args, **kwargs)
 
     @override
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
         Reimplements for part two of assigning a rich panel to default options
         related to the CLI itself

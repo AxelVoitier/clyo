@@ -199,7 +199,7 @@ exclude = [
 ]
 typeCheckingMode = "strict"
 reportPrivateUsage = "none"
-reportImplicitOverride = "error"  # PEP 698, python>=3.12
+reportImplicitOverride = "error"
 reportImportCycles = "information"
 reportMissingSuperCall = "error"
 reportPropertyTypeMismatch = "information"

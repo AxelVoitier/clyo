@@ -38,6 +38,7 @@ from rich.text import Text
 from rich.tree import Tree
 from typer import Option
 from typer.core import TyperGroup
+from typing_extensions import override
 
 # Local imports
 
@@ -70,9 +71,9 @@ def _print_commands_panel(*args: Any, **kwargs: Any) -> None:
 
 
 typer.rich_utils._orig_print_options_panel = typer.rich_utils._print_options_panel  # type: ignore  # noqa: PGH003
-typer.rich_utils._print_options_panel = _print_options_panel  # pyright: ignore[reportPrivateUsage]
+typer.rich_utils._print_options_panel = _print_options_panel
 typer.rich_utils._orig_print_commands_panel = typer.rich_utils._print_commands_panel  # type: ignore  # noqa: PGH003
-typer.rich_utils._print_commands_panel = _print_commands_panel  # pyright: ignore[reportPrivateUsage]
+typer.rich_utils._print_commands_panel = _print_commands_panel
 
 
 def _print_commands_panel_with_tree(
@@ -113,7 +114,7 @@ def _print_commands_panel_with_tree(
     def make_row_info(command: click.Command) -> tuple[Text, Text | Markdown, Text | None]:
         command_name = command.name or ''
 
-        help_text = typer.rich_utils._make_command_help(  # pyright: ignore[reportPrivateUsage]
+        help_text = typer.rich_utils._make_command_help(
             help_text=command.short_help or command.help or '',
             markup_mode=markup_mode,
         )
@@ -190,6 +191,7 @@ def _print_commands_panel_with_tree(
 
 
 class CommandsFormatterMixin(click.Command):  # Can be used on any click.Command subclass
+    @override
     def format_help(self, ctx: Context, formatter: HelpFormatter) -> None:
         global _options_panels, _commands_panels
         _options_panels = []
@@ -220,6 +222,7 @@ class CommandsFormatterMixin(click.Command):  # Can be used on any click.Command
 
 
 class ClyoTyperGroup(CommandsFormatterMixin, TyperGroup):
+    @override
     def get_help_option(self, ctx: Context) -> click.Option | None:
         """Part one of assigning a rich panel to default options related to the CLI itself"""
 
@@ -250,6 +253,7 @@ class ClyoTyper(typer.Typer):
         if parent:
             parent.add_typer(self)
 
+    @override
     def add_typer(self, *args: Any, **kwargs: Any) -> None:
         """Reimplements to inject cls argument on sub-groups"""
         if 'cls' not in kwargs:
@@ -257,6 +261,7 @@ class ClyoTyper(typer.Typer):
 
         return super().add_typer(*args, **kwargs)
 
+    @override
     def __call__(self, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         """
         Reimplements for part two of assigning a rich panel to default options
@@ -275,7 +280,7 @@ class ClyoTyper(typer.Typer):
         except Exception as e:
             setattr(
                 e,
-                typer.main._typer_developer_exception_attr_name,  # pyright: ignore[reportPrivateUsage]
+                typer.main._typer_developer_exception_attr_name,
                 typer.models.DeveloperExceptionConfig(
                     pretty_exceptions_enable=self.pretty_exceptions_enable,
                     pretty_exceptions_show_locals=self.pretty_exceptions_show_locals,
@@ -366,7 +371,7 @@ class ClyoTyper(typer.Typer):
             # Configure logging
             root_logger = logging.getLogger()
             # Compute target log level from given log_level + number of quiet - number of verbose
-            levels = sorted(set(logging._nameToLevel.values()))  # pyright: ignore[reportPrivateUsage]
+            levels = sorted(set(logging._nameToLevel.values()))
             root_logger.setLevel(
                 levels[
                     min(

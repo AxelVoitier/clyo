@@ -17,15 +17,6 @@ from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping
-    from typing import Any, Self, TypeAlias
-
-    from click import Command
-    from prompt_toolkit.completion import CompleteEvent
-    from prompt_toolkit.formatted_text import AnyFormattedText
-    from rich.console import RenderableType
-
 # Third-party imports
 import click
 import typer
@@ -47,8 +38,19 @@ from rich import print as rprint
 from rich.text import Text
 from typer import rich_utils
 from typer.main import get_command
+from typing_extensions import override
 
 # Local imports
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Iterator, Mapping
+    from typing import Any
+
+    from click import Command
+    from prompt_toolkit.completion import CompleteEvent
+    from prompt_toolkit.formatted_text import AnyFormattedText
+    from rich.console import RenderableType
+    from typing_extensions import Self, TypeAlias
 
 
 DEBUG = False
@@ -84,6 +86,8 @@ class TreeCompleter(Completer):
         command_tree: CommandTree,
         current_completer: Completer | None = None,
     ) -> None:
+        super().__init__()
+
         self._tree = command_tree
         self._current_completer = current_completer or self._tree.root_command.completer
 
@@ -95,6 +99,7 @@ class TreeCompleter(Completer):
     def current_completer(self, completer: Completer) -> None:
         self._current_completer = completer
 
+    @override
     def get_completions(
         self,
         document: Document,
@@ -119,6 +124,7 @@ class TreeCompleter(Completer):
 
 class AutoTreeCompleter(TreeCompleter):
     @property
+    @override
     def current_completer(self) -> Completer:
         return self._tree.current_command.completer
 
@@ -179,6 +185,7 @@ class CommandCompleter(WordCompleter):
             **kwargs,
         )
 
+    @override
     def get_completions(
         self,
         document: Document,
@@ -248,6 +255,7 @@ class NestedCompleterWithExtra(NestedCompleter):
 
         super().__init__(options, *args, **kwargs)
 
+    @override
     def get_completions(
         self,
         document: Document,
@@ -543,6 +551,8 @@ class CommandTree:
     ROOT_PATH = Path('/')
 
     def __init__(self, cli: typer.Typer | click.Command) -> None:
+        super().__init__()
+
         self._cli = cli
         root_command = self._cli
         if isinstance(root_command, typer.Typer):
@@ -553,14 +563,14 @@ class CommandTree:
         )
         self._pointer = self._root
         self.current_prompt: PromptSession[str] | None = None
-        self.use_fuzzy_completer = True
+        self._completer: Completer = FuzzyCompleter(AutoTreeCompleter(self))
 
         self._prefixes: dict[str, CommandTree.Prefix] = {}
         self.add_prefix('help', self._help_prefix)
         self.add_prefix('?', self._help_prefix)
 
     @property
-    def path(self) -> Path:
+    def path(self) -> str | Path:
         return self._pointer.path
 
     @path.setter

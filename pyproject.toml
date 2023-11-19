@@ -37,6 +37,7 @@ dynamic = ["version"]
 dependencies = [
   "typer[all]",
   "prompt_toolkit",
+  "typing-extensions",
 ]
 
 # [project.optional-dependencies]
@@ -93,6 +94,7 @@ check = [
 
 [[tool.hatch.envs.typing.matrix]]
 python = [
+  "3.10",
   "3.11",
   "3.12",
 ]
@@ -186,3 +188,21 @@ builtins-ignorelist = ["help"]
 [tool.ruff.format]
 quote-style = "single"
 skip-magic-trailing-comma = false
+
+[tool.pyright]
+include = [
+  "clyo",
+  "tests",
+]
+exclude = [
+  "tests/typing",
+]
+typeCheckingMode = "strict"
+reportPrivateUsage = "none"
+reportImplicitOverride = "error"  # PEP 698, python>=3.12
+reportImportCycles = "information"
+reportMissingSuperCall = "error"
+reportPropertyTypeMismatch = "information"
+reportShadowedImports = "information"
+reportUninitializedInstanceVariable = "error"
+reportUnnecessaryTypeIgnoreComment = "information"

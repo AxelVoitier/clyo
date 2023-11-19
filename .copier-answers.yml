@@ -1,11 +1,11 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 1.1.0
+_commit: 1.1.2
 _src_path: ../../py-project
 append_diataxis: false
 copyright_start_year: 2022
 description: Give your Python scripts various flavours of CLI!
 gh_user: AxelVoitier
-min_python_version: '3.11'
+min_python_version: '3.8'
 package_name: clyo
 project_name: Clyo
 repo_name: clyo

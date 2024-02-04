@@ -316,6 +316,7 @@ class ClyoTyper(typer.Typer):
         config: ConfigProtocol | None = None,
         default_config_path: Path | None = None,
         default_command: Callable[[], Any] | None = None,
+        default_logging_level: str = 'INFO',
         rich_tracebacks: bool = True,
         tracebacks_show_locals: bool = True,
         tracebacks_suppress: Iterable[str | ModuleType] | None = None,
@@ -362,7 +363,9 @@ class ClyoTyper(typer.Typer):
                 help='Decrease logging output',
                 rich_help_panel='Logging',
             ),
-            log_lvl: str = Option('INFO', help='Log level', rich_help_panel='Logging'),
+            log_lvl: str = Option(
+                default_logging_level, help='Log level', rich_help_panel='Logging'
+            ),
         ) -> None:
             # Config file
             if (config is not None) and (config_file is not None):

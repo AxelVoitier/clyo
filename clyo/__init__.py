@@ -11,6 +11,7 @@ from typer import Abort, Argument, Option
 
 # Local imports
 from .prompt import CommandTree
+from .rich import ProgressContext, StatusContext
 from .typer import ClyoTyper, ClyoTyperGroup
 
 # Aliases for easier migration
@@ -28,4 +29,6 @@ __all__ = [
     'Argument',
     'Option',
     'Abort',
+    'ProgressContext',
+    'StatusContext',
 ]
